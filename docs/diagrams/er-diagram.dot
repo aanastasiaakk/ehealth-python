@@ -1,0 +1,56 @@
+// ER-діаграма бази даних
+// Згенерувати PNG:  dot -Tpng er-diagram.dot -o ../images/er-diagram.png
+digraph er {
+    rankdir=LR;
+    graph [fontname="DejaVu Sans", pad=0.4, nodesep=0.6, ranksep=0.9,
+           label="Модель даних (PostgreSQL)", labelloc=t, fontsize=16];
+    node [fontname="DejaVu Sans", fontsize=11, shape=plaintext];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#555555", arrowhead=crow, arrowtail=tee, dir=both];
+
+    specialties [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5" BGCOLOR="#FFFFFF">
+        <TR><TD BGCOLOR="#1565C0"><FONT COLOR="white"><B>specialties</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
+        <TR><TD ALIGN="LEFT">name (unique)</TD></TR>
+      </TABLE>>];
+
+    doctors [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5" BGCOLOR="#FFFFFF">
+        <TR><TD BGCOLOR="#1565C0"><FONT COLOR="white"><B>doctors</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
+        <TR><TD ALIGN="LEFT">full_name</TD></TR>
+        <TR><TD ALIGN="LEFT">specialty_id → specialties</TD></TR>
+      </TABLE>>];
+
+    slots [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5" BGCOLOR="#FFFFFF">
+        <TR><TD BGCOLOR="#1565C0"><FONT COLOR="white"><B>slots</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
+        <TR><TD ALIGN="LEFT">doctor_id → doctors</TD></TR>
+        <TR><TD ALIGN="LEFT">starts_at</TD></TR>
+        <TR><TD ALIGN="LEFT">is_available</TD></TR>
+        <TR><TD ALIGN="LEFT"><I>UNIQUE(doctor_id, starts_at)</I></TD></TR>
+      </TABLE>>];
+
+    appointments [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5" BGCOLOR="#FFFFFF">
+        <TR><TD BGCOLOR="#C62828"><FONT COLOR="white"><B>appointments</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
+        <TR><TD ALIGN="LEFT" BGCOLOR="#FDECEA"><B>slot_id → slots (UNIQUE)</B></TD></TR>
+        <TR><TD ALIGN="LEFT">patient_id → patients</TD></TR>
+        <TR><TD ALIGN="LEFT">created_at</TD></TR>
+      </TABLE>>];
+
+    patients [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5" BGCOLOR="#FFFFFF">
+        <TR><TD BGCOLOR="#1565C0"><FONT COLOR="white"><B>patients</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
+        <TR><TD ALIGN="LEFT">full_name</TD></TR>
+        <TR><TD ALIGN="LEFT">phone (unique)</TD></TR>
+      </TABLE>>];
+
+    specialties -> doctors [label="1 : N"];
+    doctors -> slots [label="1 : N"];
+    slots -> appointments [label="1 : 0..1", arrowhead=teeodot, color="#C62828", fontcolor="#C62828"];
+    patients -> appointments [label="1 : N"];
+}

@@ -1,0 +1,23 @@
+# Запускає базу даних PostgreSQL у контейнері Docker.
+# Команда запуску:  docker compose up -d
+# Команда зупинки:  docker compose down
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ehealth-db
+    environment:
+      POSTGRES_USER: ehealth
+      POSTGRES_PASSWORD: ehealth
+      POSTGRES_DB: ehealth
+    ports:
+      - "5432:5432"   # порт_на_Mac:порт_у_контейнері
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # дані не зникнуть після перезапуску
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ehealth -d ehealth"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:

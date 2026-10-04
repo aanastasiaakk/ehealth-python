@@ -1,0 +1,43 @@
+// Схема архітектури системи e-Health Booking
+// Згенерувати PNG:  dot -Tpng architecture.dot -o ../images/architecture.png
+digraph architecture {
+    rankdir=TB;
+    graph [fontname="DejaVu Sans", fontsize=13, pad=0.4, nodesep=0.5, ranksep=0.6,
+           label="Архітектура e-Health Booking\n(суцільні блоки — реалізовано в ЛР1, пунктирні — заплановано)",
+           labelloc=t, fontsize=16];
+    node  [fontname="DejaVu Sans", fontsize=12, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#444444", margin="0.25,0.12"];
+    edge  [fontname="DejaVu Sans", fontsize=10, color="#555555"];
+
+    subgraph cluster_clients {
+        label="Клієнти"; style="rounded,dashed"; color="#999999"; fontsize=12;
+        web    [label="Веб-браузер\nпацієнта", fillcolor="#E8F0FE"];
+        mobile [label="Мобільний\nзастосунок", fillcolor="#E8F0FE"];
+        doctor [label="Кабінет лікаря /\nреєстратури", fillcolor="#E8F0FE"];
+    }
+
+    nginx [label="Nginx\nбалансувальник навантаження\n(rate limiting, least_conn)", style="rounded,filled,dashed", fillcolor="#FFF4E0"];
+
+    subgraph cluster_backend {
+        label="Бекенд: однакові копії FastAPI (stateless)"; style="rounded"; color="#2E7D32"; fontsize=12;
+        api1 [label="FastAPI #1\n(uvicorn)", fillcolor="#E6F4EA", penwidth=2];
+        api2 [label="FastAPI #2", style="rounded,filled,dashed", fillcolor="#E6F4EA"];
+        api3 [label="FastAPI #N", style="rounded,filled,dashed", fillcolor="#E6F4EA"];
+    }
+
+    redis [label="Redis\nкеш розкладу та вільних слотів\n+ брокер черги", shape=cylinder, style="filled,dashed", fillcolor="#FDECEA"];
+    pg    [label="PostgreSQL\nлікарі, пацієнти, слоти, записи\nUNIQUE(slot_id) — захист від race condition", shape=cylinder, style=filled, fillcolor="#E3F2FD", penwidth=2];
+    worker [label="Фоновий воркер (Celery)\nSMS / email-сповіщення,\nнагадування", style="rounded,filled,dashed", fillcolor="#F3E5F5"];
+
+    web -> nginx; mobile -> nginx; doctor -> nginx;
+    nginx -> api1; nginx -> api2 [style=dashed]; nginx -> api3 [style=dashed];
+
+    api1 -> redis [label=" читання кешу", style=dashed];
+    api1 -> pg    [label=" SQL (SQLAlchemy,\n пул з'єднань)", penwidth=2];
+    api2 -> pg [style=dashed]; api3 -> pg [style=dashed];
+    api2 -> redis [style=dashed]; api3 -> redis [style=dashed];
+
+    redis -> worker [label=" задачі з черги", style=dashed];
+    worker -> pg [label=" статуси", style=dashed];
+
+    {rank=same; redis; pg;}
+}

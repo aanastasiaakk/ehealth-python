@@ -1,0 +1,17 @@
+# Віртуальне оточення Python
+.venv/
+venv/
+
+# Секрети
+.env
+
+# Кеш Python та інструментів
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Системні файли macOS та редакторів
+.DS_Store
+.vscode/
+.idea/

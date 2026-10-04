@@ -1,0 +1,6 @@
+# Залежності лише для розробки (не потрібні на сервері)
+-r requirements.txt
+ruff>=0.6
+pre-commit>=3.8
+pytest>=8.0
+httpx>=0.27

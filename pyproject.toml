@@ -1,0 +1,30 @@
+[project]
+name = "ehealth-booking"
+version = "0.1.0"
+description = "Сервіс електронного запису до державних лікарів"
+requires-python = ">=3.10"
+
+# ---------- Ruff: лінтер + форматер ----------
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+# У docs є навмисно «поганий» код для демонстрації — його не перевіряємо
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+# Які групи правил перевіряти:
+#   E, W — стиль PEP 8 (відступи, пробіли, довжина рядка)
+#   F    — pyflakes: невикористані імпорти, неіснуючі змінні
+#   I    — isort: порядок імпортів
+#   B    — bugbear: типові приховані помилки
+#   UP   — pyupgrade: застарілий синтаксис Python
+select = ["E", "W", "F", "I", "B", "UP"]
+# B008: FastAPI за задумом використовує Depends() у значеннях за замовчуванням
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore:.*httpx.*"]

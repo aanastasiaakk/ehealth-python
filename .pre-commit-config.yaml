@@ -1,0 +1,23 @@
+# pre-commit запускає ці перевірки автоматично перед кожним `git commit`.
+# Якщо хоча б одна перевірка не пройде — коміт буде ЗАБЛОКОВАНО.
+# Встановлення хуків у Git (один раз):  pre-commit install
+# Ручний запуск на всіх файлах:          pre-commit run --all-files
+repos:
+  # Загальні перевірки файлів
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-ast              # блокує файли з синтаксичними помилками Python
+      - id: trailing-whitespace    # прибирає пробіли в кінці рядків
+      - id: end-of-file-fixer      # файл має закінчуватися порожнім рядком
+      - id: check-yaml             # перевіряє синтаксис YAML-файлів
+      - id: check-added-large-files
+      - id: detect-private-key     # не дає випадково закомітити приватний ключ
+
+  # Ruff: перевірка стилю та помилок + автоформатування
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.11
+    hooks:
+      - id: ruff-check    # лінтер
+        args: [--fix]     # що можна — виправляє сам, решту показує як помилку
+      - id: ruff-format   # форматер (аналог black)

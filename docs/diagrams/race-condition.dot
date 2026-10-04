@@ -1,0 +1,25 @@
+// Послідовність: двоє пацієнтів одночасно бронюють один слот (race condition)
+// Згенерувати PNG:  dot -Tpng race-condition.dot -o ../images/race-condition.png
+digraph race {
+    rankdir=TB;
+    graph [fontname="DejaVu Sans", pad=0.4, nodesep=0.5, ranksep=0.45,
+           label="Як система захищається від подвійного бронювання (08:00:00.001)", labelloc=t, fontsize=16];
+    node [fontname="DejaVu Sans", fontsize=11, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#444444"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#555555"];
+
+    a [label="Пацієнтка А натискає\n«Записатися на слот #42»", fillcolor="#E8F0FE"];
+    b [label="Пацієнт Б натискає\n«Записатися на слот #42»", fillcolor="#E8F0FE"];
+
+    ba [label="FastAPI #1\nINSERT INTO appointments (slot_id=42, ...)", fillcolor="#E6F4EA"];
+    bb [label="FastAPI #2\nINSERT INTO appointments (slot_id=42, ...)", fillcolor="#E6F4EA"];
+
+    pg [label="PostgreSQL перевіряє обмеження UNIQUE(slot_id)\nі виконує вставки строго по черзі", shape=cylinder, fillcolor="#E3F2FD"];
+
+    ok  [label="Перша вставка: успіх\n→ 201 «Ви записані на 14:30»", fillcolor="#C8E6C9"];
+    err [label="Друга вставка: помилка IntegrityError\n→ 409 «Слот щойно зайняли, оберіть інший»", fillcolor="#FFCDD2"];
+
+    a -> ba; b -> bb;
+    ba -> pg; bb -> pg;
+    pg -> ok; pg -> err;
+    {rank=same; a; b;} {rank=same; ba; bb;} {rank=same; ok; err;}
+}
