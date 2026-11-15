@@ -16,6 +16,7 @@
 - [3. Демонстрація pre-commit хуків](docs/03-pre-commit.md)
 - [4. ЛР2: користувачі, ролі, розмежування прав](docs/04-lab2-auth.md)
 - [5. ЛР3: середовища sandbox / production, обробка помилок, CI](docs/05-lab3-environments.md)
+- [6. ЛР4: навантажувальне тестування (Locust), метрики, вузькі місця](docs/06-lab4-load-testing.md)
 
 ![Архітектура](docs/images/architecture.png)
 
@@ -59,6 +60,12 @@ ehealth-booking/
 │   ├── web/pages.py          #   HTML-сторінки
 │   └── templates/            #   HTML-шаблони
 ├── scripts/seed.py           # початкові дані (демо-дані лише в sandbox)
+├── scripts/seed_loadtest.py  # 200 тестових пацієнтів і слоти для ЛР4
+├── loadtest/                 # НАВАНТАЖУВАЛЬНЕ ТЕСТУВАННЯ (ЛР4)
+│   ├── locustfile.py         #   сценарій Locust і профіль навантаження
+│   ├── monitor.py            #   збір CPU/RAM сервера під час тесту
+│   ├── make_report.py        #   графіки й таблиці для звіту
+│   └── results/              #   сирі результати прогонів (CSV)
 ├── tests/                    # ТЕСТИ (102 шт.)
 ├── .github/workflows/ci.yml  # CI: лінтери + тести на кожен Pull Request
 ├── docs/                     # ДОКУМЕНТАЦІЯ та схеми
@@ -174,6 +181,22 @@ pre-commit run --all-files        # всі перевірки, як перед �
 
 Тести створюють окрему базу `ehealth_sandbox_test`, тому не чіпають
 ні демо-дані sandbox, ні production.
+
+## Навантажувальне тестування (Locust)
+
+Повний звіт з метриками, графіками й вузькими місцями:
+[docs/06-lab4-load-testing.md](docs/06-lab4-load-testing.md).
+
+```bash
+pip install -r requirements-loadtest.txt
+APP_ENV=sandbox python -m scripts.seed_loadtest        # 200 тестових пацієнтів
+APP_ENV=sandbox DEBUG=false uvicorn app.main:app --port 8000
+locust -f loadtest/locustfile.py --host http://127.0.0.1:8000   # → http://localhost:8089
+```
+
+Коротко: до 300 одночасних користувачів (~165 RPS) система працює
+швидко (p95 < 100 мс, 0 помилок); на ~320 користувачах вичерпується
+пул з'єднань з БД і сервер перестає відповідати.
 
 ## CI/CD (GitHub Actions)
 

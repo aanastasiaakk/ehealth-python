@@ -1,0 +1,8 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,POST /appointments (book),HTTPError('500 Server Error: Internal Server Error for url: POST /appointments (book)'),3,2026-11-15T22:29:38Z,2026-11-15T22:30:08Z
+GET,GET /doctors,HTTPError('500 Server Error: Internal Server Error for url: GET /doctors'),16,2026-11-15T22:29:38Z,2026-11-15T22:30:39Z
+GET,GET /appointments/me,HTTPError('500 Server Error: Internal Server Error for url: GET /appointments/me'),6,2026-11-15T22:30:09Z,2026-11-15T22:30:38Z
+GET,GET /doctors/[id]/slots,HTTPError('500 Server Error: Internal Server Error for url: GET /doctors/[id]/slots'),43,2026-11-15T22:29:38Z,2026-11-15T22:30:39Z
+GET,GET /specialties,HTTPError('500 Server Error: Internal Server Error for url: GET /specialties'),19,2026-11-15T22:29:38Z,2026-11-15T22:30:39Z
+DELETE,DELETE /appointments/[id],HTTPError('404 Client Error: Not Found for url: DELETE /appointments/[id]'),2,2026-11-15T22:28:08Z,2026-11-15T22:28:35Z
+GET,GET /doctors,"ConnectionResetError(104, 'Connection reset by peer')",1,2026-11-15T22:29:39Z,2026-11-15T22:29:39Z

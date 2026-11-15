@@ -1,0 +1,49 @@
+[2026-11-15 22:23:01,284] vm/INFO/locust.main: Starting Locust 2.47.0
+[2026-11-15 22:23:01,286] vm/INFO/locust.runners: Shape test starting.
+[2026-11-15 22:23:01,287] vm/INFO/locust.runners: Shape worker starting
+[2026-11-15 22:23:01,287] vm/INFO/locust.runners: Shape test updating to 25 users at 5.00 spawn rate
+[2026-11-15 22:23:01,287] vm/INFO/locust.runners: Ramping to 25 users at a rate of 5.00 per second
+[2026-11-15 22:23:05,293] vm/INFO/locust.runners: All users spawned: {"Patient": 10, "Visitor": 15} (25 total users)
+[2026-11-15 22:23:46,356] vm/INFO/locust.runners: Shape test updating to 50 users at 5.00 spawn rate
+[2026-11-15 22:23:46,357] vm/INFO/locust.runners: Ramping to 50 users at a rate of 5.00 per second
+[2026-11-15 22:23:50,364] vm/INFO/locust.runners: All users spawned: {"Patient": 20, "Visitor": 30} (50 total users)
+[2026-11-15 22:24:31,432] vm/INFO/locust.runners: Shape test updating to 100 users at 5.00 spawn rate
+[2026-11-15 22:24:31,432] vm/INFO/locust.runners: Ramping to 100 users at a rate of 5.00 per second
+[2026-11-15 22:24:40,451] vm/INFO/locust.runners: All users spawned: {"Patient": 40, "Visitor": 60} (100 total users)
+[2026-11-15 22:25:16,525] vm/INFO/locust.runners: Shape test updating to 150 users at 5.00 spawn rate
+[2026-11-15 22:25:16,525] vm/INFO/locust.runners: Ramping to 150 users at a rate of 5.00 per second
+[2026-11-15 22:25:25,547] vm/INFO/locust.runners: All users spawned: {"Patient": 60, "Visitor": 90} (150 total users)
+[2026-11-15 22:26:01,626] vm/INFO/locust.runners: Shape test updating to 200 users at 5.00 spawn rate
+[2026-11-15 22:26:01,626] vm/INFO/locust.runners: Ramping to 200 users at a rate of 5.00 per second
+[2026-11-15 22:26:10,652] vm/INFO/locust.runners: All users spawned: {"Patient": 80, "Visitor": 120} (200 total users)
+[2026-11-15 22:26:46,750] vm/INFO/locust.runners: Shape test stopping
+[2026-11-15 22:26:46,778] vm/INFO/locust.main: Shape test completed, shutting down
+[2026-11-15 22:26:46,835] vm/INFO/locust.main: Shutting down (exit code 0)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+DELETE   DELETE /appointments/[id]                                                        416     0(0.00%) |     15       6     115     12 |    1.84        0.00
+GET      GET / (page)                                                                     120     0(0.00%) |     15       5      81     12 |    0.53        0.00
+GET      GET /appointments/me                                                            1415     0(0.00%) |     14       4     183     10 |    6.28        0.00
+GET      GET /doctors                                                                    1983     0(0.00%) |      9       2     168      6 |    8.79        0.00
+GET      GET /doctors/[id]/slots                                                         5945     0(0.00%) |     13       4     192     10 |   26.37        0.00
+GET      GET /health                                                                      574     0(0.00%) |      4       1      95      3 |    2.55        0.00
+GET      GET /specialties                                                                1752     0(0.00%) |      8       2     170      6 |    7.77        0.00
+POST     POST /appointments (book)                                                        916     0(0.00%) |     21       7     149     17 |    4.06        0.00
+POST     POST /auth/token (login)                                                          80     0(0.00%) |    359     254     476    360 |    0.35        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                     13201     0(0.00%) |     14       1     476      9 |   58.55        0.00
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+DELETE   DELETE /appointments/[id]                                                              12     15     18     19     27     33     55     62    120    120    120    416
+GET      GET / (page)                                                                           12     14     15     16     21     65     76     76     81     81     81    120
+GET      GET /appointments/me                                                                   10     12     15     16     24     32     62     91    150    180    180   1415
+GET      GET /doctors                                                                            6      9     11     12     18     25     39     56    150    170    170   1983
+GET      GET /doctors/[id]/slots                                                                10     12     14     15     21     29     58     81    150    190    190   5945
+GET      GET /health                                                                             3      4      5      5      8     12     24     42     96     96     96    574
+GET      GET /specialties                                                                        6      7      9     10     16     22     40     71    150    170    170   1752
+POST     POST /appointments (book)                                                              17     21     24     27     37     49     64     86    150    150    150    916
+POST     POST /auth/token (login)                                                              360    380    400    410    430    460    460    480    480    480    480     80
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                              9     12     14     15     22     32     67    110    420    460    480  13201
