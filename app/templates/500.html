@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Помилка сервера · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Щось пішло не так</h1>
+  <p>На сервері сталася помилка. Ми вже про неї знаємо, спробуйте трохи пізніше.</p>
+  <p class="muted">Код помилки: <b>{{ error_id }}</b>. Назвіть його підтримці, щоб ми швидше знайшли причину.</p>
+  <p><a class="btn" href="/">На головну</a></p>
+</div>
+{% endblock %}

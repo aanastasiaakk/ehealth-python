@@ -1,23 +1,48 @@
-# Запускає базу даних PostgreSQL у контейнері Docker.
-# Команда запуску:  docker compose up -d
-# Команда зупинки:  docker compose down
+# Дві ОКРЕМІ бази даних: для тестового (sandbox) і робочого (production)
+# середовищ. Це різні контейнери з різними користувачами, паролями,
+# портами й томами даних — тестові дані фізично не можуть потрапити
+# в робочу базу.
+#
+# Паролі беруться з файлу .env (шаблон: .env.example).
+# Запуск обох:        docker compose up -d
+# Лише sandbox:       docker compose up -d db-sandbox
+# Зупинка:            docker compose down
 services:
-  db:
+  db-sandbox:
     image: postgres:16-alpine
-    container_name: ehealth-db
+    container_name: ehealth-db-sandbox
     environment:
-      POSTGRES_USER: ehealth
-      POSTGRES_PASSWORD: ehealth
-      POSTGRES_DB: ehealth
+      POSTGRES_USER: ehealth_sandbox
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_SANDBOX:?Set POSTGRES_PASSWORD_SANDBOX in .env}
+      POSTGRES_DB: ehealth_sandbox
     ports:
-      - "5432:5432"   # порт_на_Mac:порт_у_контейнері
+      - "5433:5432"   # порт_на_Mac:порт_у_контейнері
     volumes:
-      - pgdata:/var/lib/postgresql/data   # дані не зникнуть після перезапуску
+      - pgdata-sandbox:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ehealth -d ehealth"]
+      test: ["CMD-SHELL", "pg_isready -U ehealth_sandbox -d ehealth_sandbox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db-production:
+    image: postgres:16-alpine
+    container_name: ehealth-db-production
+    environment:
+      POSTGRES_USER: ehealth_prod
+      # Без пароля в .env контейнер не запуститься (немає значення за замовчуванням)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_PROD:?Set POSTGRES_PASSWORD_PROD in .env}
+      POSTGRES_DB: ehealth_production
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-production:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ehealth_prod -d ehealth_production"]
       interval: 5s
       timeout: 3s
       retries: 5
 
 volumes:
-  pgdata:
+  pgdata-sandbox:
+  pgdata-production:

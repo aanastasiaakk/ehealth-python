@@ -1,9 +1,13 @@
 """Спільні налаштування тестів (pytest автоматично підхоплює цей файл).
 
-Тести працюють з ОКРЕМОЮ базою даних `<назва>_test`, щоб не зіпсувати
-дані, з якими ти працюєш локально. База створюється автоматично
-(потрібен запущений PostgreSQL: `docker compose up -d`).
+Тести ЗАВЖДИ працюють у sandbox і з ОКРЕМОЮ базою `<sandbox-база>_test`,
+щоб не зіпсувати ні робочі дані, ні твої демо-дані в sandbox.
+База створюється автоматично на сервері db-sandbox
+(потрібен запущений PostgreSQL: `docker compose up -d db-sandbox`).
 Перед кожним тестом усі таблиці очищаються, тому тести незалежні один від одного.
+
+У CI (GitHub Actions) файлу .env.sandbox немає — там DATABASE_URL і
+SECRET_KEY передаються звичайними змінними оточення.
 """
 
 import os
@@ -14,11 +18,19 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
-from app.config import Settings, get_settings
-
 # ---------- 1. Перемикаємо застосунок на тестову базу ----------
-# Робимо це ДО імпорту app.database, бо там одразу створюється engine.
-_base = make_url(Settings().database_url)
+# Робимо це ДО імпорту застосунку: app.config обирає файл .env.<середовище>
+# під час імпорту, а app.database одразу створює engine.
+# Тести ніколи не запускаються проти production:
+os.environ["APP_ENV"] = "sandbox"
+# Перевіряємо поведінку «як у production»: без детальних стектрейсів
+os.environ["DEBUG"] = "false"
+
+from app.config import Settings, get_settings  # noqa: E402
+
+_base = make_url(Settings(_env_file=".env.sandbox").database_url)
+if _base.database and "prod" in _base.database:
+    raise RuntimeError("Tests must never run against the production database")
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL") or _base.set(
     database=f"{_base.database}_test"
 ).render_as_string(hide_password=False)
