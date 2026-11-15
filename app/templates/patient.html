@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Кабінет пацієнта · {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Кабінет пацієнта</h1>
+
+<div class="card">
+  <h2>Мої записи</h2>
+  {% if appointments %}
+  <table>
+    <tr><th>Дата і час</th><th>Лікар</th><th>Спеціальність</th><th></th></tr>
+    {% for a in appointments %}
+    <tr>
+      <td>{{ a.slot.starts_at | local }}</td>
+      <td>{{ a.slot.doctor.full_name }}</td>
+      <td>{{ a.slot.doctor.specialty.name }}</td>
+      <td>
+        <form class="inline" method="post" action="/patient/cancel/{{ a.id }}">
+          <button class="btn danger small">Скасувати</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">У вас поки немає записів. Оберіть лікаря нижче.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Записатися до лікаря</h2>
+  <form method="get" action="/patient">
+    <label for="specialty_id">Спеціальність</label>
+    <select id="specialty_id" name="specialty_id" onchange="this.form.submit()">
+      <option value="">Усі спеціальності</option>
+      {% for s in specialties %}
+      <option value="{{ s.id }}" {% if s.id == selected_specialty %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {% for d in doctors %}
+  <div class="doctor-row">
+    <b>{{ d.full_name }}</b> <span class="muted">· {{ d.specialty.name }}</span>
+    <div class="slots">
+      {% for s in free[d.id] %}
+      <form class="inline" method="post" action="/patient/book">
+        <input type="hidden" name="slot_id" value="{{ s.id }}">
+        <button class="btn secondary small">{{ s.starts_at | local }}</button>
+      </form>
+      {% else %}
+      <span class="muted">Вільних слотів найближчим часом немає</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">Лікарів не знайдено.</p>
+  {% endfor %}
+</div>
+{% endblock %}

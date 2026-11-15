@@ -3,7 +3,7 @@
 digraph er {
     rankdir=LR;
     graph [fontname="DejaVu Sans", pad=0.4, nodesep=0.6, ranksep=0.9,
-           label="Модель даних (PostgreSQL)", labelloc=t, fontsize=16];
+           label="Модель даних (PostgreSQL), ЛР2", labelloc=t, fontsize=16];
     node [fontname="DejaVu Sans", fontsize=11, shape=plaintext];
     edge [fontname="DejaVu Sans", fontsize=10, color="#555555", arrowhead=crow, arrowtail=tee, dir=both];
 
@@ -20,6 +20,7 @@ digraph er {
         <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
         <TR><TD ALIGN="LEFT">full_name</TD></TR>
         <TR><TD ALIGN="LEFT">specialty_id → specialties</TD></TR>
+        <TR><TD ALIGN="LEFT">user_id → users (unique)</TD></TR>
       </TABLE>>];
 
     slots [label=<
@@ -37,20 +38,24 @@ digraph er {
         <TR><TD BGCOLOR="#C62828"><FONT COLOR="white"><B>appointments</B></FONT></TD></TR>
         <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
         <TR><TD ALIGN="LEFT" BGCOLOR="#FDECEA"><B>slot_id → slots (UNIQUE)</B></TD></TR>
-        <TR><TD ALIGN="LEFT">patient_id → patients</TD></TR>
+        <TR><TD ALIGN="LEFT">patient_id → users</TD></TR>
         <TR><TD ALIGN="LEFT">created_at</TD></TR>
       </TABLE>>];
 
-    patients [label=<
+    users [label=<
       <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5" BGCOLOR="#FFFFFF">
-        <TR><TD BGCOLOR="#1565C0"><FONT COLOR="white"><B>patients</B></FONT></TD></TR>
+        <TR><TD BGCOLOR="#2E7D32"><FONT COLOR="white"><B>users</B></FONT></TD></TR>
         <TR><TD ALIGN="LEFT"><B>id (PK)</B></TD></TR>
-        <TR><TD ALIGN="LEFT">full_name</TD></TR>
-        <TR><TD ALIGN="LEFT">phone (unique)</TD></TR>
+        <TR><TD ALIGN="LEFT">email (unique)</TD></TR>
+        <TR><TD ALIGN="LEFT">password_hash (bcrypt)</TD></TR>
+        <TR><TD ALIGN="LEFT">full_name, phone</TD></TR>
+        <TR><TD ALIGN="LEFT" BGCOLOR="#E6F4EA"><B>role: patient | doctor | admin</B></TD></TR>
+        <TR><TD ALIGN="LEFT">is_active, created_at</TD></TR>
       </TABLE>>];
 
     specialties -> doctors [label="1 : N"];
     doctors -> slots [label="1 : N"];
     slots -> appointments [label="1 : 0..1", arrowhead=teeodot, color="#C62828", fontcolor="#C62828"];
-    patients -> appointments [label="1 : N"];
+    users -> appointments [label="1 : N (пацієнт)"];
+    users -> doctors [label="1 : 0..1 (акаунт лікаря)", arrowhead=teeodot, style=dashed];
 }

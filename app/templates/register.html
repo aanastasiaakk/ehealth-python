@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Реєстрація · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Реєстрація пацієнта</h1>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+  <form method="post" action="/register">
+    <label for="full_name">Прізвище та ім'я</label>
+    <input id="full_name" name="full_name" required value="{{ form.full_name or '' }}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required value="{{ form.email or '' }}">
+    <label for="phone">Телефон (необов'язково)</label>
+    <input id="phone" name="phone" value="{{ form.phone or '' }}" placeholder="+380...">
+    <label for="password">Пароль (мінімум 8 символів)</label>
+    <input id="password" name="password" type="password" required minlength="8">
+    <p><button class="btn">Зареєструватися</button></p>
+  </form>
+  <p class="muted">Вже є акаунт? <a href="/login">Увійти</a></p>
+</div>
+{% endblock %}

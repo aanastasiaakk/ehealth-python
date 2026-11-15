@@ -1,0 +1,32 @@
+// Як сервер вирішує, чи пропустити запит
+// Згенерувати PNG:  dot -Tpng auth-flow.dot -o ../images/auth-flow.png
+digraph authflow {
+    rankdir=TB;
+    graph [fontname="DejaVu Sans", pad=0.4, nodesep=0.45, ranksep=0.4,
+           label="Перевірка доступу до захищеного маршруту (напр. DELETE /appointments/7)", labelloc=t, fontsize=15];
+    node [fontname="DejaVu Sans", fontsize=11, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#444444"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#555555"];
+
+    req   [label="HTTP-запит", fillcolor="#E8F0FE"];
+    tok   [label="Є токен?\nзаголовок Authorization: Bearer …\nабо cookie access_token", shape=diamond, fillcolor="#FFF4E0"];
+    valid [label="Підпис правильний\nі термін не минув?", shape=diamond, fillcolor="#FFF4E0"];
+    load  [label="Завантажити користувача з БД\n(актуальні роль та is_active)", fillcolor="#E3F2FD"];
+    act   [label="Користувач існує\nі активний?", shape=diamond, fillcolor="#FFF4E0"];
+    role  [label="Вертикальна перевірка:\nроль дозволена для маршруту?\nrequire_roles(...)", shape=diamond, fillcolor="#FFF4E0"];
+    own   [label="Горизонтальна перевірка (IDOR):\nресурс належить користувачу\nабо користувач — адмін?\nensure_owner_or_admin(...)", shape=diamond, fillcolor="#FFF4E0"];
+    ok    [label="Виконати дію → 200 / 201 / 204", fillcolor="#C8E6C9"];
+    e401  [label="401 Unauthorized\n(сторінки: 302 → /login)", fillcolor="#FFCDD2"];
+    e403a [label="403 Forbidden", fillcolor="#FFCDD2"];
+    e403b [label="403 Forbidden", fillcolor="#FFCDD2"];
+
+    req -> tok;
+    tok -> valid [label=" так"];   tok -> e401 [label=" ні"];
+    valid -> load [label=" так"];  valid -> e401 [label=" ні"];
+    load -> act;
+    act -> role [label=" так"];    act -> e401 [label=" ні"];
+    role -> own [label=" так"];    role -> e403a [label=" ні"];
+    own -> ok [label=" так"];      own -> e403b [label=" ні"];
+    {rank=same; valid; e401;}
+    {rank=same; role; e403a;}
+    {rank=same; own; e403b;}
+}
