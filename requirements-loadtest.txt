@@ -1,0 +1,5 @@
+# Інструменти навантажувального тестування (ЛР4)
+-r requirements.txt
+locust>=2.30      # генератор навантаження
+psutil>=5.9       # збір CPU/RAM сервера (loadtest/monitor.py)
+matplotlib>=3.8   # графіки для звіту (loadtest/make_report.py)

@@ -19,3 +19,6 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# HTML-звіти Locust (~1 МБ, генеруються при кожному запуску)
+loadtest/results/*.html
