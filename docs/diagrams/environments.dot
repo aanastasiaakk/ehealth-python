@@ -1,0 +1,34 @@
+// Розділення середовищ (ЛР3)
+// Згенерувати PNG:  dot -Tpng environments.dot -o ../images/environments.png
+digraph env {
+    rankdir=LR;
+    graph [fontname="DejaVu Sans", pad=0.4, nodesep=0.5, ranksep=0.9,
+           label="Розділення середовищ і CI (ЛР3)", labelloc=t, fontsize=16];
+    node [fontname="DejaVu Sans", fontsize=11, shape=box, style="rounded,filled", fillcolor="#FFFFFF", color="#444444"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#555555"];
+
+    code [label="Один і той самий код\n(репозиторій GitHub)\nбез паролів і ключів", fillcolor="#E8F0FE"];
+
+    subgraph cluster_sb {
+        label="SANDBOX  (APP_ENV=sandbox)"; style="rounded"; color="#2E7D32"; fontsize=12;
+        sbenv [label=".env.sandbox\nDEBUG=true, /docs увімкнено\nдемо-акаунти", fillcolor="#E6F4EA"];
+        sbapp [label="FastAPI\nдетальні помилки\nзі стектрейсом", fillcolor="#E6F4EA"];
+        sbdb  [label="db-sandbox :5433\nehealth_sandbox\n+ ehealth_sandbox_test", shape=cylinder, fillcolor="#E6F4EA"];
+        sbenv -> sbapp; sbapp -> sbdb;
+    }
+
+    subgraph cluster_pr {
+        label="PRODUCTION  (APP_ENV=production)"; style="rounded"; color="#C62828"; fontsize=12;
+        prenv [label=".env.production\nDEBUG=false (примусово)\n/docs вимкнено, лише адмін", fillcolor="#FDECEA"];
+        prapp [label="FastAPI\nпомилка 500 → «Щось пішло не так»\n+ код помилки, стектрейс лише в лог", fillcolor="#FDECEA"];
+        prdb  [label="db-production :5434\nehealth_production\nінший користувач і пароль", shape=cylinder, fillcolor="#FDECEA"];
+        prenv -> prapp; prapp -> prdb;
+    }
+
+    ci [label="GitHub Actions (CI)\nPull Request / push у main:\n1) ruff  2) pytest + PostgreSQL", fillcolor="#FFF4E0"];
+
+    code -> sbenv [label=" розробка"];
+    code -> prenv [label=" після злиття в main"];
+    code -> ci [style=dashed, label=" кожен PR"];
+    sbdb -> prdb [style=invis];
+}

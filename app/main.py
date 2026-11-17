@@ -12,6 +12,7 @@ from app import models  # noqa: F401  (імпорт реєструє табли�
 from app.api import admin, appointments, auth, catalog, doctor, health, users
 from app.config import get_settings
 from app.database import Base, engine
+from app.errors import setup_error_handling
 from app.web import pages
 
 settings = get_settings()
@@ -28,9 +29,18 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="Сервіс електронного запису до державних лікарів",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
+    # У production debug завжди False (перевіряє app/config.py)
+    debug=settings.debug,
+    # Swagger можна вимкнути (у production за замовчуванням вимкнений)
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
 )
+
+# Помилки 500 без стектрейсів для користувача, сторінка 404 (ЛР3)
+setup_error_handling(app)
 
 # ---- JSON API ----
 app.include_router(health.router)

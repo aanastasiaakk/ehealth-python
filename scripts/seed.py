@@ -1,15 +1,19 @@
-"""Заповнює базу тестовими даними для демонстрації.
+"""Заповнює базу початковими даними.
 
 Запуск (з кореня проєкту, з увімкненим .venv):
 
-    python -m scripts.seed
+    APP_ENV=sandbox    python -m scripts.seed   # тестове середовище
+    APP_ENV=production python -m scripts.seed   # робоче середовище
 
 Скрипт можна запускати повторно: те, що вже існує, не дублюється.
-Створює:
-- адміністратора (email і пароль з .env: ADMIN_EMAIL / ADMIN_PASSWORD);
-- 4 спеціальності та 4 лікарів з обліковими записами;
-- демо-пацієнта;
-- слоти на 5 найближчих робочих днів (9:00–13:00 по 30 хв, за Києвом).
+
+У будь-якому середовищі створює адміністратора
+(ADMIN_EMAIL / ADMIN_PASSWORD з файлу .env.<середовище>).
+
+ЛИШЕ в sandbox додатково створює демо-дані: 4 спеціальності, 4 лікарів
+з простими паролями, демо-пацієнта і слоти на 5 робочих днів.
+У production демо-дані НЕ створюються, щоб тестові акаунти з відомими
+паролями не потрапили в робоче середовище.
 """
 
 from datetime import date, datetime, time, timedelta
@@ -50,12 +54,19 @@ def ensure_user(db, email, password, full_name, role, phone=None):
     user = user_service.get_user_by_email(db, email)
     if user is None:
         user = user_service.create_user(db, email, password, full_name, phone, role)
-        print(f"  + {role.value:8} {email} / {password}")
+        # Пароль production-адміна в консоль не друкуємо
+        shown = "***" if get_settings().is_production else password
+        print(f"  + {role.value:8} {email} / {shown}")
     return user
 
 
 def main() -> None:
     settings = get_settings()
+    if not settings.admin_email or not settings.admin_password:
+        raise SystemExit(
+            f"Вкажіть ADMIN_EMAIL і ADMIN_PASSWORD у файлі .env.{settings.app_env}"
+        )
+    print(f"Середовище: {settings.app_env}")
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -67,6 +78,9 @@ def main() -> None:
             "Адміністратор системи",
             Role.ADMIN,
         )
+        if settings.is_production:
+            print("Production: демо-дані не створюються. Готово!")
+            return
         ensure_user(
             db,
             PATIENT_EMAIL,

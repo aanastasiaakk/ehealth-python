@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.database import get_db
 
 router = APIRouter(tags=["health"])
@@ -15,8 +16,8 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health")
 def health() -> dict:
-    """Чи живий сам бекенд (без звернення до бази)."""
-    return {"status": "ok"}
+    """Чи живий сам бекенд (без звернення до бази) і в якому середовищі."""
+    return {"status": "ok", "environment": get_settings().app_env}
 
 
 @router.get("/health/db")
