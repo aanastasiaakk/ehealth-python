@@ -4,3 +4,9 @@ uvicorn[standard]>=0.30
 sqlalchemy>=2.0
 psycopg[binary]>=3.2
 pydantic-settings>=2.4
+email-validator>=2.1     # перевірка формату email (EmailStr)
+# ЛР2: автентифікація та HTML-сторінки
+pyjwt>=2.8               # JWT-токени
+bcrypt>=4.1              # хешування паролів
+jinja2>=3.1              # HTML-шаблони
+python-multipart>=0.0.9  # обробка HTML-форм (логін, реєстрація)

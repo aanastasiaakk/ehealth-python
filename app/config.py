@@ -1,6 +1,6 @@
 """Налаштування застосунку.
 
-Усі параметри (адреса бази даних, назва застосунку тощо) читаються
+Усі параметри (адреса бази даних, секретний ключ тощо) читаються
 зі змінних оточення або з файлу `.env`. Завдяки цьому паролі не
 потрапляють у код і в Git, а для різних середовищ (локально, сервер)
 достатньо змінити лише `.env`.
@@ -18,6 +18,18 @@ class Settings(BaseSettings):
 
     # Формат: драйвер://користувач:пароль@хост:порт/назва_бази
     database_url: str = "postgresql+psycopg://ehealth:ehealth@localhost:5432/ehealth"
+
+    # ---- Автентифікація (ЛР2) ----
+    # Секретний ключ, яким підписуються JWT-токени.
+    # На справжньому сервері має бути довгим випадковим рядком!
+    # Згенерувати: python3 -c "import secrets; print(secrets.token_hex(32))"
+    secret_key: str = "dev-secret-key-change-me-in-production-0123456789"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+
+    # Перший адміністратор створюється скриптом scripts/seed.py
+    admin_email: str = "admin@ehealth.ua"
+    admin_password: str = "admin12345"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

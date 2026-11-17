@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Адмін-панель · {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Адмін-панель</h1>
+
+<div class="card">
+  <h2>Статистика</h2>
+  <div class="grid">
+    <div class="stat"><b>{{ stats.users }}</b>користувачів</div>
+    <div class="stat"><b>{{ stats.patients }}</b>пацієнтів</div>
+    <div class="stat"><b>{{ stats.doctors }}</b>лікарів</div>
+    <div class="stat"><b>{{ stats.slots_free }}</b>вільних слотів</div>
+    <div class="stat"><b>{{ stats.appointments }}</b>записів</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Останні записи</h2>
+  {% if recent %}
+  <table>
+    <tr><th>Створено</th><th>Пацієнт</th><th>Лікар</th><th>Прийом</th></tr>
+    {% for a in recent %}
+    <tr>
+      <td>{{ a.created_at | local }}</td>
+      <td>{{ a.patient.full_name }}</td>
+      <td>{{ a.slot.doctor.full_name }}</td>
+      <td>{{ a.slot.starts_at | local }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">Записів ще немає.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Користувачі</h2>
+  <table>
+    <tr><th>ID</th><th>Ім'я</th><th>Email</th><th>Роль</th><th>Активний</th></tr>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td><td>{{ u.full_name }}</td><td>{{ u.email }}</td>
+      <td><span class="badge {{ u.role.value }}">{{ u.role.value }}</span></td>
+      <td>{{ "так" if u.is_active else "ні" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Керування (ролі, блокування, лікарі, слоти) — через API у розділі
+    <a href="/docs#/admin">admin</a>.</p>
+</div>
+{% endblock %}

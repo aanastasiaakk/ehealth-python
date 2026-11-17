@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f5f7fa; --card: #ffffff; --text: #1f2933; --muted: #6b7785;
+      --accent: #1565c0; --accent-soft: #e3f0fd; --ok: #2e7d32; --ok-soft: #e6f4ea;
+      --err: #c62828; --err-soft: #fdecea; --line: #e3e8ee;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+           background: var(--bg); color: var(--text); line-height: 1.5; }
+    header { background: var(--card); border-bottom: 1px solid var(--line); }
+    .bar { max-width: 1000px; margin: 0 auto; padding: 12px 16px;
+           display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .logo { font-weight: 700; color: var(--accent); text-decoration: none; font-size: 18px; }
+    .spacer { flex: 1; }
+    .who { color: var(--muted); font-size: 14px; }
+    main { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 20px; margin-bottom: 20px; overflow-x: auto; }
+    h1 { font-size: 24px; margin: 0 0 16px; }
+    h2 { font-size: 18px; margin: 0 0 12px; }
+    .muted { color: var(--muted); }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px;
+             font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+    .badge.admin { background: var(--err-soft); color: var(--err); }
+    .badge.doctor { background: var(--ok-soft); color: var(--ok); }
+    .btn { display: inline-block; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+           background: var(--accent); color: #fff; font-size: 14px; text-decoration: none; }
+    .btn.secondary { background: var(--accent-soft); color: var(--accent); }
+    .btn.danger { background: var(--err-soft); color: var(--err); }
+    .btn.small { padding: 4px 10px; font-size: 13px; }
+    form.inline { display: inline; margin: 0; }
+    label { display: block; font-size: 14px; margin: 12px 0 4px; }
+    input, select { width: 100%; padding: 9px 11px; border: 1px solid var(--line);
+                    border-radius: 8px; font-size: 15px; }
+    .narrow { max-width: 420px; margin: 40px auto; }
+    .alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+    .alert.success { background: var(--ok-soft); color: var(--ok); }
+    .alert.error { background: var(--err-soft); color: var(--err); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .stat { background: var(--accent-soft); border-radius: 10px; padding: 12px; }
+    .stat b { display: block; font-size: 26px; color: var(--accent); }
+    .slots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .doctor-row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .doctor-row:last-child { border-bottom: 0; }
+    .free { color: var(--ok); } .busy { color: var(--err); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <a class="logo" href="/">🏥 {{ app_name }}</a>
+      <span class="spacer"></span>
+      {% if user %}
+        <span class="who">{{ user.full_name }}
+          <span class="badge {{ user.role.value }}">{{ user.role.value }}</span></span>
+        <a class="btn secondary small" href="/docs">API</a>
+        <form class="inline" method="post" action="/logout">
+          <button class="btn secondary small">Вийти</button>
+        </form>
+      {% else %}
+        <a class="btn secondary small" href="/login">Увійти</a>
+        <a class="btn small" href="/register">Реєстрація</a>
+      {% endif %}
+    </div>
+  </header>
+  <main>
+    {% if message %}<div class="alert {{ message[0] }}">{{ message[1] }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

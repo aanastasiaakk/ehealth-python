@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Вхід · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Вхід</h1>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required value="{{ email or '' }}">
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" required>
+    <p><button class="btn">Увійти</button></p>
+  </form>
+  <p class="muted">Немає акаунта? <a href="/register">Зареєструйтеся</a></p>
+</div>
+{% endblock %}
