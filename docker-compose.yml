@@ -1,13 +1,43 @@
-# Дві ОКРЕМІ бази даних: для тестового (sandbox) і робочого (production)
-# середовищ. Це різні контейнери з різними користувачами, паролями,
-# портами й томами даних — тестові дані фізично не можуть потрапити
-# в робочу базу.
+# Уся система e-Health Booking в Docker (ЛР5).
 #
-# Паролі беруться з файлу .env (шаблон: .env.example).
-# Запуск обох:        docker compose up -d
-# Лише sandbox:       docker compose up -d db-sandbox
-# Зупинка:            docker compose down
+#   docker compose up --build        зібрати образ і підняти ВСЕ
+#   docker compose up -d --build     те саме, але у фоні
+#   docker compose ps                стан сервісів (healthy / exited (0))
+#   docker compose logs -f app       логи застосунку
+#   docker compose down              зупинити (ДАНІ БАЗ ЗБЕРІГАЮТЬСЯ в томах)
+#   docker compose down -v           зупинити й ВИДАЛИТИ дані баз
+#
+# Застосунок у Docker: http://127.0.0.1:8080
+# (порти 8000/8001 лишаються вільними для локального запуску uvicorn)
+#
+# Порядок запуску (depends_on + healthcheck):
+#   db-sandbox (healthy) → migrate (таблиці + початкові дані, exited 0) → app
+#
+# Паролі баз беруться з файлу .env (шаблон .env.example), решта
+# налаштувань застосунку — з .env.sandbox. У Git ці файли не потрапляють.
+#
+# Режим розробки з автоперезавантаженням: див. docker-compose.dev.yml
+
+# Спільні налаштування застосунку (YAML-якір: пишемо один раз,
+# використовуємо в сервісах migrate і app)
+x-app-common: &app-common
+  build:
+    context: .
+    target: runtime
+  image: ehealth-booking:latest
+  env_file: .env.sandbox
+  environment:
+    APP_ENV: sandbox
+    DEBUG: "false"
+    # Таблиці створює сервіс migrate, а не кожна копія застосунку
+    AUTO_MIGRATE: "false"
+    # У Docker база доступна за ІМ'ЯМ сервісу (db-sandbox) і внутрішнім
+    # портом 5432 — через внутрішню мережу backend, а не через localhost.
+    # Це значення має пріоритет над DATABASE_URL з .env.sandbox.
+    DATABASE_URL: postgresql+psycopg://ehealth_sandbox:${POSTGRES_PASSWORD_SANDBOX:?Set POSTGRES_PASSWORD_SANDBOX in .env}@db-sandbox:5432/ehealth_sandbox
+
 services:
+  # ---------- База даних тестового середовища ----------
   db-sandbox:
     image: postgres:16-alpine
     container_name: ehealth-db-sandbox
@@ -16,15 +46,22 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_SANDBOX:?Set POSTGRES_PASSWORD_SANDBOX in .env}
       POSTGRES_DB: ehealth_sandbox
     ports:
-      - "5433:5432"   # порт_на_Mac:порт_у_контейнері
+      # Доступ з Mac лише для локальної розробки (uvicorn, pytest).
+      # 127.0.0.1 — порт відкритий тільки на цьому комп'ютері, не в мережу.
+      - "127.0.0.1:5433:5432"
     volumes:
+      # Том Docker: дані лежать ПОЗА контейнером і переживають
+      # docker compose down, перезапуск і навіть видалення контейнера
       - pgdata-sandbox:/var/lib/postgresql/data
+    networks: [backend]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ehealth_sandbox -d ehealth_sandbox"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
 
+  # ---------- База даних робочого середовища (ЛР3) ----------
   db-production:
     image: postgres:16-alpine
     container_name: ehealth-db-production
@@ -34,14 +71,47 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_PROD:?Set POSTGRES_PASSWORD_PROD in .env}
       POSTGRES_DB: ehealth_production
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - pgdata-production:/var/lib/postgresql/data
+    networks: [backend]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ehealth_prod -d ehealth_production"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+
+  # ---------- Одноразовий крок: міграції + початкові дані ----------
+  migrate:
+    <<: *app-common
+    command: ["sh", "-c", "python -m scripts.migrate && python -m scripts.seed"]
+    depends_on:
+      db-sandbox:
+        condition: service_healthy   # чекаємо, поки база реально готова
+    networks: [backend]
+    restart: "no"
+
+  # ---------- Бекенд FastAPI ----------
+  app:
+    <<: *app-common
+    depends_on:
+      db-sandbox:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully   # міграції пройшли без помилок
+    ports:
+      - "8080:8000"   # порт_на_Mac:порт_у_контейнері
+    # backend — для бази, frontend — для запитів ззовні (і Nginx у ЛР6)
+    networks: [backend, frontend]
+    restart: unless-stopped
+
+# Внутрішні мережі: сервіси знаходять один одного за іменами
+# (db-sandbox, app). База під'єднана лише до backend, тож з мережі
+# frontend до неї дістатися неможливо.
+networks:
+  backend:
+  frontend:
 
 volumes:
   pgdata-sandbox:

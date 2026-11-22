@@ -11,8 +11,9 @@ from fastapi.responses import RedirectResponse
 from app import models  # noqa: F401  (імпорт реєструє таблиці в Base.metadata)
 from app.api import admin, appointments, auth, catalog, doctor, health, users
 from app.config import get_settings
-from app.database import Base, engine
+from app.database import engine
 from app.errors import setup_error_handling
+from app.migrations import apply_migrations
 from app.web import pages
 
 settings = get_settings()
@@ -20,16 +21,18 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Виконується один раз під час старту сервера:
-    # створює таблиці в базі, якщо їх ще немає.
-    Base.metadata.create_all(bind=engine)
+    # Виконується один раз під час старту сервера: створює таблиці й
+    # індекси, яких ще немає. У Docker вимкнено (AUTO_MIGRATE=false):
+    # там це робить окремий сервіс `migrate` до старту застосунку.
+    if settings.auto_migrate:
+        apply_migrations(engine)
     yield
 
 
 app = FastAPI(
     title=settings.app_name,
     description="Сервіс електронного запису до державних лікарів",
-    version="0.3.0",
+    version="0.5.0",
     lifespan=lifespan,
     # У production debug завжди False (перевіряє app/config.py)
     debug=settings.debug,

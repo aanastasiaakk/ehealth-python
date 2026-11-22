@@ -1,6 +1,6 @@
 [project]
 name = "ehealth-booking"
-version = "0.4.0"
+version = "0.5.0"
 description = "Сервіс електронного запису до державних лікарів"
 requires-python = ">=3.10"
 
