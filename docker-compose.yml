@@ -1,4 +1,4 @@
-# Уся система e-Health Booking в Docker (ЛР5).
+# Уся система e-Health Booking в Docker (ЛР5, ЛР6).
 #
 #   docker compose up --build        зібрати образ і підняти ВСЕ
 #   docker compose up -d --build     те саме, але у фоні
@@ -7,11 +7,16 @@
 #   docker compose down              зупинити (ДАНІ БАЗ ЗБЕРІГАЮТЬСЯ в томах)
 #   docker compose down -v           зупинити й ВИДАЛИТИ дані баз
 #
-# Застосунок у Docker: http://127.0.0.1:8080
+# Вхід у систему: http://127.0.0.1:8080 → Nginx → 3 репліки app
 # (порти 8000/8001 лишаються вільними для локального запуску uvicorn)
 #
 # Порядок запуску (depends_on + healthcheck):
-#   db-sandbox (healthy) → migrate (таблиці + початкові дані, exited 0) → app
+#   db-sandbox (healthy) → migrate (таблиці + початкові дані, exited 0)
+#   → app ×3 (healthy) → nginx
+#
+# Кількість реплік і алгоритм балансування (ЛР6):
+#   APP_REPLICAS=2 docker compose up -d          інша кількість реплік
+#   NGINX_LB=least_conn docker compose up -d     least_conn / ip_hash / round_robin
 #
 # Паролі баз беруться з файлу .env (шаблон .env.example), решта
 # налаштувань застосунку — з .env.sandbox. У Git ці файли не потрапляють.
@@ -92,23 +97,53 @@ services:
     networks: [backend]
     restart: "no"
 
-  # ---------- Бекенд FastAPI ----------
+  # ---------- Бекенд FastAPI: кілька однакових реплік (ЛР6) ----------
   app:
     <<: *app-common
+    deploy:
+      # Скільки однакових копій застосунку запустити. Кожна — окремий
+      # контейнер зі своїм hostname (його видно в /health і X-Instance)
+      replicas: ${APP_REPLICAS:-3}
     depends_on:
       db-sandbox:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully   # міграції пройшли без помилок
-    ports:
-      - "8080:8000"   # порт_на_Mac:порт_у_контейнері
-    # backend — для бази, frontend — для запитів ззовні (і Nginx у ЛР6)
+    # Порт НЕ публікується на Mac: три репліки не можуть зайняти один
+    # порт 8080. Ззовні до них можна дістатися лише через Nginx.
+    expose:
+      - "8000"
+    # backend — для бази, frontend — для запитів від Nginx
     networks: [backend, frontend]
     restart: unless-stopped
 
+  # ---------- Nginx: балансувальник навантаження (ЛР6) ----------
+  nginx:
+    image: nginx:1.28-alpine
+    environment:
+      # Алгоритм: round_robin (за замовчуванням), least_conn, ip_hash
+      NGINX_LB: ${NGINX_LB:-round_robin}
+      # Підставляти в шаблон лише змінні з префіксом NGINX_
+      NGINX_ENVSUBST_FILTER: "^NGINX_"
+    volumes:
+      - ./config/nginx/templates:/etc/nginx/templates:ro
+      - ./config/nginx/lb:/etc/nginx/lb:ro
+    ports:
+      - "8080:80"   # єдина точка входу в систему
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [frontend]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 # Внутрішні мережі: сервіси знаходять один одного за іменами
-# (db-sandbox, app). База під'єднана лише до backend, тож з мережі
-# frontend до неї дістатися неможливо.
+# (db-sandbox, app). База під'єднана лише до backend, Nginx — лише до
+# frontend: з балансувальника до бази дістатися неможливо.
 networks:
   backend:
   frontend:

@@ -75,3 +75,33 @@ def test_dev_override_enables_hot_reload():
     app = _compose("docker-compose.dev.yml")["services"]["app"]
     assert "--reload" in app["command"]
     assert any(v.startswith("./app:") for v in app["volumes"])
+
+
+# ---------- ЛР6: балансувальник ----------
+
+NGINX_DIR = ROOT / "config" / "nginx"
+
+
+def test_compose_runs_several_app_replicas_behind_nginx():
+    services = _compose()["services"]
+    assert str(services["app"]["deploy"]["replicas"]).endswith("3}")
+    assert "ports" not in services["app"]  # репліки доступні лише через Nginx
+    assert services["nginx"]["ports"] == ["8080:80"]
+    assert services["nginx"]["depends_on"]["app"]["condition"] == "service_healthy"
+    assert services["nginx"]["networks"] == ["frontend"]
+
+
+def test_nginx_upstream_with_passive_health_checks():
+    conf = (NGINX_DIR / "templates" / "default.conf.template").read_text()
+    assert "upstream ehealth_app" in conf
+    assert "proxy_pass http://ehealth_app;" in conf
+    assert "server app:8000 resolve max_fails=1 fail_timeout=10s;" in conf
+    assert "proxy_next_upstream error timeout" in conf
+    assert "listen 80;" in conf
+
+
+def test_every_balancing_algorithm_has_a_snippet():
+    snippets = {p.stem: p.read_text() for p in (NGINX_DIR / "lb").glob("*.conf")}
+    assert set(snippets) == {"round_robin", "least_conn", "ip_hash"}
+    assert "least_conn;" in snippets["least_conn"]
+    assert "ip_hash;" in snippets["ip_hash"]

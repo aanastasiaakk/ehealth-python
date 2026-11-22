@@ -1,0 +1,75 @@
+# Nginx — єдина точка входу і балансувальник навантаження (ЛР6).
+#
+# Це ШАБЛОН: під час старту контейнера nginx підставляє змінні оточення
+# (${NGINX_LB}) і кладе готовий файл у /etc/nginx/conf.d/default.conf.
+# Змінні самого nginx ($host, $upstream_addr...) лишаються як є.
+
+# Вбудований DNS Docker. Ім'я `app` він перетворює на IP-адреси ВСІХ
+# реплік сервісу app. valid=5s — перепитувати кожні 5 с, щоб Nginx
+# помічав нові або перезапущені репліки без власного перезапуску.
+resolver 127.0.0.11 valid=5s ipv6=off;
+
+# Група серверів (upstream), між якими розподіляються запити
+upstream ehealth_app {
+    # Спільна пам'ять для стану групи (потрібна для `resolve`)
+    zone ehealth_app 64k;
+
+    # Алгоритм балансування. За замовчуванням — Round Robin (по черзі).
+    # Інші: least_conn (найменше активних з'єднань), ip_hash (один
+    # клієнт завжди на ту саму репліку). Вибір: змінна NGINX_LB.
+    include /etc/nginx/lb/${NGINX_LB}.conf;
+
+    # `app` — ім'я сервісу в docker-compose.yml, `resolve` — оновлювати
+    # список IP реплік на льоту.
+    # Пасивна перевірка здоров'я: якщо репліка 1 раз не відповіла
+    # (max_fails=1), Nginx 10 с (fail_timeout) не надсилає їй запитів,
+    # а потім обережно пробує знову.
+    server app:8000 resolve max_fails=1 fail_timeout=10s;
+
+    # Тримати відкриті з'єднання до реплік (не відкривати TCP щоразу)
+    keepalive 32;
+}
+
+# У лозі доступу видно, на ЯКУ репліку пішов кожен запит
+log_format balancer '$remote_addr "$request" $status '
+                    '-> $upstream_addr ($upstream_response_time s)';
+
+server {
+    listen 80;
+    server_name _;
+    access_log /var/log/nginx/access.log balancer;
+
+    # Перевірка, що живий сам Nginx (для healthcheck у docker compose)
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        proxy_pass http://ehealth_app;
+
+        # HTTP/1.1 і порожній Connection — потрібні для keepalive
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        # Передаємо застосунку справжню адресу клієнта
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Відмовостійкість: якщо репліка не відповіла (помилка з'єднання,
+        # тайм-аут, 502/503/504), той самий запит прозоро пробуємо на
+        # НАСТУПНІЙ репліці. Клієнт помилки не бачить.
+        # POST (запис до лікаря) Nginx повторно не надсилає — це захист
+        # від подвійного запису.
+        proxy_connect_timeout 2s;
+        proxy_read_timeout 30s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 3;
+
+        # Для демонстрації: адреса репліки, яка відповіла
+        add_header X-Upstream $upstream_addr always;
+    }
+}

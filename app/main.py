@@ -13,6 +13,7 @@ from app.api import admin, appointments, auth, catalog, doctor, health, users
 from app.config import get_settings
 from app.database import engine
 from app.errors import setup_error_handling
+from app.instance import INSTANCE_ID
 from app.migrations import apply_migrations
 from app.web import pages
 
@@ -44,6 +45,34 @@ app = FastAPI(
 
 # Помилки 500 без стектрейсів для користувача, сторінка 404 (ЛР3)
 setup_error_handling(app)
+
+
+class InstanceHeaderMiddleware:
+    """Додає до КОЖНОЇ відповіді заголовок X-Instance з ім'ям копії
+    застосунку (ЛР6): так видно, яку репліку обрав Nginx.
+
+    Написано як «чисте» ASGI-проміжне ПЗ: воно лише дописує заголовок
+    і майже не додає затримки, на відміну від BaseHTTPMiddleware."""
+
+    def __init__(self, asgi_app):
+        self.app = asgi_app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_with_header(message):
+            if message["type"] == "http.response.start":
+                message["headers"] = [
+                    *message.get("headers", []),
+                    (b"x-instance", INSTANCE_ID.encode()),
+                ]
+            await send(message)
+
+        await self.app(scope, receive, send_with_header)
+
+
+app.add_middleware(InstanceHeaderMiddleware)
 
 # ---- JSON API ----
 app.include_router(health.router)

@@ -10,14 +10,20 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
+from app.instance import INSTANCE_ID
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
 def health() -> dict:
-    """Чи живий сам бекенд (без звернення до бази) і в якому середовищі."""
-    return {"status": "ok", "environment": get_settings().app_env}
+    """Чи живий сам бекенд (без звернення до бази), у якому середовищі
+    і яка саме копія застосунку відповіла (ЛР6)."""
+    return {
+        "status": "ok",
+        "environment": get_settings().app_env,
+        "instance": INSTANCE_ID,
+    }
 
 
 @router.get("/health/db")

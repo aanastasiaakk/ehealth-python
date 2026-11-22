@@ -1,8 +1,9 @@
-"""Збирає завантаження CPU і RAM сервера під час тесту (ЛР4).
+"""Збирає завантаження CPU і RAM сервера під час тесту (ЛР4, ЛР6–ЛР8).
 
 Раз на секунду записує в CSV:
-- загальне CPU і RAM машини;
-- CPU і RAM процесів застосунку (uvicorn) і бази даних (postgres).
+- загальне CPU і RAM машини (у МБ і у %);
+- CPU і RAM груп процесів: застосунок (усі процеси uvicorn разом),
+  база даних (postgres), балансувальник (nginx), кеш (redis-server).
 
 Запуск у сусідньому терміналі ПЕРЕД стартом Locust:
 
@@ -16,6 +17,14 @@ import sys
 import time
 
 import psutil
+
+# Група → підрядок у командному рядку процесу
+GROUPS = {
+    "app": "uvicorn",
+    "db": "postgres",
+    "nginx": "nginx",
+    "redis": "redis-server",
+}
 
 
 def matches(proc: psutil.Process, *names: str) -> bool:
@@ -42,35 +51,36 @@ def main(path: str) -> None:
     start = time.time()
     with open(path, "w", newline="") as fh:
         writer = csv.writer(fh)
-        writer.writerow(
-            ["t", "cpu_total", "ram_used_mb", "app_cpu", "app_mb", "db_cpu", "db_mb"]
-        )
-        app, db = [], []
+        header = ["t", "cpu_total", "ram_used_mb", "ram_percent"]
+        for group in GROUPS:
+            header += [f"{group}_cpu", f"{group}_mb"]
+        writer.writerow(header)
         while True:
             # Список процесів оновлюємо щоразу: uvicorn/postgres можуть
             # створювати нові процеси під навантаженням
             current = list(psutil.process_iter())
-            app = [p for p in current if matches(p, "uvicorn")]
-            db = [p for p in current if matches(p, "postgres")]
-            for proc in app + db:
-                try:
-                    proc.cpu_percent(None)
-                except psutil.Error:
-                    pass
+            procs = {
+                group: [p for p in current if matches(p, name)]
+                for group, name in GROUPS.items()
+            }
+            for group_procs in procs.values():
+                for proc in group_procs:
+                    try:
+                        proc.cpu_percent(None)
+                    except psutil.Error:
+                        pass
             time.sleep(1)
-            app_cpu, app_mb = group_usage(app)
-            db_cpu, db_mb = group_usage(db)
-            writer.writerow(
-                [
-                    round(time.time() - start),
-                    psutil.cpu_percent(None),
-                    round(psutil.virtual_memory().used / 2**20),
-                    round(app_cpu, 1),
-                    round(app_mb),
-                    round(db_cpu, 1),
-                    round(db_mb),
-                ]
-            )
+            memory = psutil.virtual_memory()
+            row = [
+                round(time.time() - start),
+                psutil.cpu_percent(None),
+                round(memory.used / 2**20),
+                memory.percent,
+            ]
+            for group_procs in procs.values():
+                cpu, mb = group_usage(group_procs)
+                row += [round(cpu, 1), round(mb)]
+            writer.writerow(row)
             fh.flush()
 
 
