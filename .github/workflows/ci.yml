@@ -109,6 +109,22 @@ jobs:
         run: |
           curl -fsS -o /dev/null http://127.0.0.1:8080/specialties
           curl -fsS -D - -o /dev/null http://127.0.0.1:8080/specialties | tr -d '\r' | grep -i '^x-cache: HIT'
+      - name: "ЛР8: моніторинг (Prometheus + Grafana)"
+        run: |
+          docker compose --profile monitoring up -d
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:3000/api/health && break
+            sleep 2
+          done
+          sleep 20
+          curl -fsS 'http://127.0.0.1:9090/api/v1/query?query=up' | python3 -c "
+          import json, sys
+          result = json.load(sys.stdin)['data']['result']
+          up = {r['labels']['job'] for r in result if r['value'][1] == '1'}
+          print('targets up:', up)
+          assert {'ehealth-app', 'postgres'} <= up
+          "
+          curl -fsS 'http://127.0.0.1:3000/api/search?query=e-Health' | grep -q ehealth-overview
       - name: Розмір образу
         run: docker image ls ehealth-booking
       - name: Логи (якщо щось пішло не так)

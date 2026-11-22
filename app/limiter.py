@@ -23,6 +23,9 @@ import json
 
 BUSY_BODY = json.dumps({"detail": "Server is busy, please retry"}).encode()
 
+# Поточний стан «турнікета» (ЛР8: показується в Prometheus/Grafana)
+STATE = {"in_flight": 0, "queued": 0}
+
 
 class ConcurrencyLimitMiddleware:
     def __init__(
@@ -53,14 +56,19 @@ class ConcurrencyLimitMiddleware:
             return await self.app(scope, receive, send)
 
         semaphore = self._get_semaphore()
+        STATE["queued"] += 1
         try:
             await asyncio.wait_for(semaphore.acquire(), self.queue_timeout)
         except asyncio.TimeoutError:
             await _send_busy(send)
             return
+        finally:
+            STATE["queued"] -= 1
+        STATE["in_flight"] += 1
         try:
             await self.app(scope, receive, send)
         finally:
+            STATE["in_flight"] -= 1
             semaphore.release()
 
 

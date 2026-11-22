@@ -11,3 +11,4 @@ bcrypt>=4.1              # хешування паролів
 jinja2>=3.1              # HTML-шаблони
 python-multipart>=0.0.9  # обробка HTML-форм (логін, реєстрація)
 redis>=5.0               # ЛР7: кеш каталогу
+prometheus-fastapi-instrumentator>=7.0  # ЛР8: метрики /metrics для Prometheus

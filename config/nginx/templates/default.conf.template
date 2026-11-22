@@ -46,6 +46,12 @@ server {
         return 200 "ok\n";
     }
 
+    # Метрики репліки (ЛР8) збирає Prometheus напряму у внутрішній мережі.
+    # Ззовні їх не видно: там є технічні подробиці роботи сервера.
+    location = /metrics {
+        return 404;
+    }
+
     location / {
         proxy_pass http://ehealth_app;
 

@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+DELETE,DELETE /appointments/[id],HTTPError('404 Client Error: Not Found for url: DELETE /appointments/[id]'),5,2026-11-22T09:50:20Z,2026-11-22T09:51:00Z

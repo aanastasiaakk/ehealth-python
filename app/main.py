@@ -15,6 +15,7 @@ from app.database import engine
 from app.errors import setup_error_handling
 from app.instance import INSTANCE_ID
 from app.limiter import ConcurrencyLimitMiddleware
+from app.metrics import setup_metrics
 from app.migrations import apply_migrations
 from app.web import pages
 
@@ -34,7 +35,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="Сервіс електронного запису до державних лікарів",
-    version="0.7.0",
+    version="0.8.0",
     lifespan=lifespan,
     # У production debug завжди False (перевіряє app/config.py)
     debug=settings.debug,
@@ -81,6 +82,9 @@ app.add_middleware(
 )
 # Додається останнім = виконується першим: X-Instance є навіть у відповіді 503
 app.add_middleware(InstanceHeaderMiddleware)
+
+# ЛР8: метрики для Prometheus на /metrics (див. app/metrics.py)
+setup_metrics(app)
 
 # ---- JSON API ----
 app.include_router(health.router)

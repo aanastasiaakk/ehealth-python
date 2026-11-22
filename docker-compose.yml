@@ -1,4 +1,4 @@
-# Уся система e-Health Booking в Docker (ЛР5–ЛР7).
+# Уся система e-Health Booking в Docker (ЛР5–ЛР8).
 #
 #   docker compose up --build        зібрати образ і підняти ВСЕ
 #   docker compose up -d --build     те саме, але у фоні
@@ -17,6 +17,11 @@
 # Кількість реплік і алгоритм балансування (ЛР6):
 #   APP_REPLICAS=2 docker compose up -d          інша кількість реплік
 #   NGINX_LB=least_conn docker compose up -d     least_conn / ip_hash / round_robin
+#
+# Моніторинг (ЛР8): Prometheus + Grafana + postgres-exporter
+#   docker compose --profile monitoring up -d
+#   Grafana:    http://127.0.0.1:3000   (дашборд «e-Health Booking: огляд»)
+#   Prometheus: http://127.0.0.1:9090
 #
 # Паролі баз беруться з файлу .env (шаблон .env.example), решта
 # налаштувань застосунку — з .env.sandbox. У Git ці файли не потрапляють.
@@ -164,6 +169,51 @@ services:
       timeout: 3s
       retries: 5
 
+  # ---------- Моніторинг (ЛР8), лише з --profile monitoring ----------
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks: [backend]
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    profiles: [monitoring]
+    environment:
+      DATA_SOURCE_NAME: postgresql://ehealth_sandbox:${POSTGRES_PASSWORD_SANDBOX}@db-sandbox:5432/ehealth_sandbox?sslmode=disable
+    depends_on:
+      db-sandbox:
+        condition: service_healthy
+    networks: [backend]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    profiles: [monitoring]
+    environment:
+      # Перегляд дашбордів без входу (лише на цьому комп'ютері: порт на 127.0.0.1)
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/ehealth.json
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on: [prometheus]
+    networks: [backend]
+    restart: unless-stopped
+
 # Внутрішні мережі: сервіси знаходять один одного за іменами
 # (db-sandbox, app). База під'єднана лише до backend, Nginx — лише до
 # frontend: з балансувальника до бази дістатися неможливо.
@@ -174,3 +224,5 @@ networks:
 volumes:
   pgdata-sandbox:
   pgdata-production:
+  prometheus-data:
+  grafana-data:
