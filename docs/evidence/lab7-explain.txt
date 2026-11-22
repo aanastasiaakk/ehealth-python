@@ -1,0 +1,85 @@
+Тестові дані: 2,528,000 слотів, з них вільних 485,095
+
+=================== ДО (індекси ЛР2–ЛР6) ===================
+
+Індекси таблиці slots:
+    ix_slots_doctor_id                       17 MB
+    ix_slots_starts_at                       17 MB
+    slots_doctor_id_starts_at_key            108 MB
+    slots_pkey                               54 MB
+
+--- Вільні слоти лікаря (GET /doctors/{id}/slots)
+SELECT id, doctor_id, starts_at, is_available FROM slots
+WHERE doctor_id = 42 AND is_available AND starts_at > now()
+  AND starts_at < now() + interval '14 days'
+ORDER BY starts_at LIMIT 200
+    Limit  (cost=1550.55..1550.76 rows=84 width=17) (actual time=0.457..0.480 rows=200 loops=1)
+      Buffers: shared hit=454
+      ->  Sort  (cost=1550.55..1550.76 rows=84 width=17) (actual time=0.456..0.465 rows=200 loops=1)
+            Sort Key: starts_at
+            Sort Method: quicksort  Memory: 45kB
+            Buffers: shared hit=454
+            ->  Bitmap Heap Scan on slots  (cost=17.93..1547.87 rows=84 width=17) (actual time=0.106..0.420 rows=296 loops=1)
+                  Recheck Cond: ((doctor_id = 42) AND (starts_at > now()) AND (starts_at < (now() + '14 days'::interval)))
+                  Filter: is_available
+                  Rows Removed by Filter: 152
+                  Heap Blocks: exact=448
+                  Buffers: shared hit=454
+                  ->  Bitmap Index Scan on slots_doctor_id_starts_at_key  (cost=0.00..17.91 rows=438 width=0) (actual time=0.044..0.045 rows=448 loops=1)
+                        Index Cond: ((doctor_id = 42) AND (starts_at > now()) AND (starts_at < (now() + '14 days'::interval)))
+                        Buffers: shared hit=6
+    Planning Time: 0.072 ms
+    Execution Time: 0.502 ms
+
+--- Кількість вільних слотів (статистика адміна)
+SELECT count(*) FROM slots WHERE is_available AND starts_at > now()
+    Aggregate  (cost=5083.79..5083.80 rows=1 width=8) (actual time=24.904..24.904 rows=1 loops=1)
+      Buffers: shared hit=1378
+      ->  Index Scan using ix_slots_starts_at on slots  (cost=0.43..4996.04 rows=35099 width=0) (actual time=0.012..18.436 rows=133556 loops=1)
+            Index Cond: (starts_at > now())
+            Filter: is_available
+            Rows Removed by Filter: 57244
+            Buffers: shared hit=1378
+    Planning Time: 0.058 ms
+    Execution Time: 24.922 ms
+
+=================== ПІСЛЯ (ЛР7) ===================
+
+Індекси таблиці slots:
+    ix_slots_free_by_doctor                  15 MB
+    ix_slots_starts_at                       17 MB
+    slots_doctor_id_starts_at_key            108 MB
+    slots_pkey                               54 MB
+
+--- Вільні слоти лікаря (GET /doctors/{id}/slots)
+SELECT id, doctor_id, starts_at, is_available FROM slots
+WHERE doctor_id = 42 AND is_available AND starts_at > now()
+  AND starts_at < now() + interval '14 days'
+ORDER BY starts_at LIMIT 200
+    Limit  (cost=335.58..335.80 rows=86 width=17) (actual time=0.274..0.296 rows=200 loops=1)
+      Buffers: shared hit=300
+      ->  Sort  (cost=335.58..335.80 rows=86 width=17) (actual time=0.273..0.282 rows=200 loops=1)
+            Sort Key: starts_at
+            Sort Method: quicksort  Memory: 45kB
+            Buffers: shared hit=300
+            ->  Bitmap Heap Scan on slots  (cost=5.53..332.82 rows=86 width=17) (actual time=0.055..0.252 rows=296 loops=1)
+                  Recheck Cond: ((doctor_id = 42) AND (starts_at > now()) AND (starts_at < (now() + '14 days'::interval)) AND is_available)
+                  Heap Blocks: exact=296
+                  Buffers: shared hit=300
+                  ->  Bitmap Index Scan on ix_slots_free_by_doctor  (cost=0.00..5.51 rows=86 width=0) (actual time=0.028..0.028 rows=296 loops=1)
+                        Index Cond: ((doctor_id = 42) AND (starts_at > now()) AND (starts_at < (now() + '14 days'::interval)))
+                        Buffers: shared hit=4
+    Planning Time: 0.074 ms
+    Execution Time: 0.315 ms
+
+--- Кількість вільних слотів (статистика адміна)
+SELECT count(*) FROM slots WHERE is_available AND starts_at > now()
+    Aggregate  (cost=5231.14..5231.15 rows=1 width=8) (actual time=23.895..23.896 rows=1 loops=1)
+      Buffers: shared hit=1378
+      ->  Index Scan using ix_slots_starts_at on slots  (cost=0.43..5141.44 rows=35879 width=0) (actual time=0.012..17.742 rows=133556 loops=1)
+            Index Cond: (starts_at > now())
+            Filter: is_available
+            Rows Removed by Filter: 57244
+            Buffers: shared hit=1378
+    Planning Time: 0.076 ms
+    Execution Time: 23.916 ms

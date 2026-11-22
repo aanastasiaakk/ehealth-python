@@ -19,6 +19,7 @@
 - [6. ЛР4: навантажувальне тестування (Locust), метрики, вузькі місця](docs/06-lab4-load-testing.md)
 - [7. ЛР5: контейнеризація (Docker, docker compose)](docs/07-lab5-docker.md)
 - [8. ЛР6: балансування навантаження (Nginx, 3 репліки)](docs/08-lab6-load-balancing.md)
+- [9. ЛР7: оптимізація (обмежувач запитів, Redis, індекси, ДО/ПІСЛЯ)](docs/09-lab7-optimization.md)
 
 ![Архітектура](docs/images/architecture.png)
 
@@ -36,6 +37,7 @@
 | pytest | тести |
 | **Docker**, docker compose | контейнери: застосунок + бази однією командою |
 | **Nginx** | балансувальник навантаження перед 3 репліками (ЛР6) |
+| **Redis** | кеш каталогу лікарів і вільних слотів (ЛР7) |
 
 ## Структура проєкту
 
@@ -46,6 +48,8 @@ ehealth-booking/
 │   ├── config.py             #   налаштування (.env.sandbox / .env.production)
 │   ├── errors.py             #   сторінки помилок 500/404 без стектрейсів
 │   ├── database.py           #   підключення до PostgreSQL
+│   ├── cache.py              #   кеш у Redis (ЛР7)
+│   ├── limiter.py            #   обмеження одночасних запитів (ЛР7)
 │   ├── models.py             #   таблиці бази даних
 │   ├── schemas.py            #   формати даних API (що приймаємо / віддаємо)
 │   ├── security.py           #   паролі (bcrypt) і токени (JWT)
@@ -65,6 +69,7 @@ ehealth-booking/
 │   └── templates/            #   HTML-шаблони
 ├── scripts/seed.py           # початкові дані (демо-дані лише в sandbox)
 ├── scripts/migrate.py        # таблиці й індекси (у Docker — сервіс migrate)
+├── scripts/explain_analyze.py # EXPLAIN ANALYZE до/після індексів (ЛР7)
 ├── scripts/seed_loadtest.py  # 200 тестових пацієнтів і слоти для ЛР4
 ├── loadtest/                 # НАВАНТАЖУВАЛЬНЕ ТЕСТУВАННЯ (ЛР4)
 │   ├── locustfile.py         #   сценарій Locust і профіль навантаження
@@ -205,9 +210,15 @@ APP_ENV=sandbox DEBUG=false uvicorn app.main:app --port 8000
 locust -f loadtest/locustfile.py --host http://127.0.0.1:8000   # → http://localhost:8089
 ```
 
-Коротко: до 300 одночасних користувачів (~165 RPS) система працює
-швидко (p95 < 100 мс, 0 помилок); на ~320 користувачах вичерпується
-пул з'єднань з БД і сервер перестає відповідати.
+Коротко: у ЛР4 на ~320 користувачах вичерпувався пул з'єднань з БД і
+сервер переставав відповідати. Після оптимізацій ЛР7 (обмежувач
+запитів, кеш Redis, частковий індекс) той самий один процес тримає 600
+користувачів: 323 RPS, p95 71 мс, 0 помилок
+([docs/09-lab7-optimization.md](docs/09-lab7-optimization.md)).
+
+Локально кеш вмикається змінною `REDIS_URL=redis://localhost:6379/0`
+(Redis: `brew install redis && brew services start redis`); без неї
+застосунок працює без кешу.
 
 ## CI/CD (GitHub Actions)
 

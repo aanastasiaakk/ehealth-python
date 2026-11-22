@@ -1,0 +1,6 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,POST /appointments (book),HTTPError('500 Server Error: Internal Server Error for url: POST /appointments (book)'),1,2026-11-22T08:55:14Z,2026-11-22T08:55:14Z
+GET,GET /doctors,HTTPError('500 Server Error: Internal Server Error for url: GET /doctors'),31,2026-11-22T08:55:14Z,2026-11-22T08:57:15Z
+GET,GET /appointments/me,HTTPError('500 Server Error: Internal Server Error for url: GET /appointments/me'),20,2026-11-22T08:55:14Z,2026-11-22T08:57:15Z
+GET,GET /doctors/[id]/slots,HTTPError('500 Server Error: Internal Server Error for url: GET /doctors/[id]/slots'),113,2026-11-22T08:55:14Z,2026-11-22T08:57:15Z
+GET,GET /specialties,HTTPError('500 Server Error: Internal Server Error for url: GET /specialties'),26,2026-11-22T08:55:14Z,2026-11-22T08:57:15Z

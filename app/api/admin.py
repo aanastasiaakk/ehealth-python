@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app import cache
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
 from app.models import Doctor, Role, Specialty, User
@@ -99,6 +100,7 @@ def create_specialty(data: SpecialtyCreate, db: Session = Depends(get_db)):
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(409, "Specialty already exists") from exc
+    cache.invalidate_catalog()  # ЛР7: нова спеціальність видна одразу
     return specialty
 
 
@@ -118,6 +120,7 @@ def create_doctor(data: DoctorCreate, db: Session = Depends(get_db)):
     )
     db.add(doctor)
     db.commit()
+    cache.invalidate_catalog()  # ЛР7: новий лікар видний одразу
     return db.scalar(
         select(Doctor)
         .where(Doctor.id == doctor.id)

@@ -20,6 +20,7 @@ engine = create_engine(
     settings.database_url,
     pool_size=settings.db_pool_size,  # скільки з'єднань тримати відкритими
     max_overflow=settings.db_max_overflow,  # скільки додаткових відкрити під час піку
+    pool_timeout=settings.db_pool_timeout,  # скільки чекати вільне з'єднання (ЛР7)
     pool_pre_ping=True,  # перевіряти, чи з'єднання ще живе, перед використанням
     echo=settings.debug,  # у режимі debug друкувати SQL-запити в консоль
 )

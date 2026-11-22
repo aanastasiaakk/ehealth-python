@@ -13,10 +13,15 @@
 Функцію можна запускати скільки завгодно разів: нічого не дублюється.
 """
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
 
 from app import models  # noqa: F401  (реєструє всі таблиці в Base.metadata)
 from app.database import Base
+
+# Індекси, які прибрали з моделей, але які ще є в старих базах (ЛР7):
+# ix_slots_doctor_id дублює індекс обмеження UNIQUE(doctor_id, starts_at)
+# і лише сповільнює вставку слотів.
+OBSOLETE_INDEXES = ["ix_slots_doctor_id"]
 
 
 def apply_migrations(engine: Engine) -> None:
@@ -24,3 +29,6 @@ def apply_migrations(engine: Engine) -> None:
     for table in Base.metadata.sorted_tables:
         for index in table.indexes:
             index.create(bind=engine, checkfirst=True)
+    with engine.begin() as conn:
+        for name in OBSOLETE_INDEXES:
+            conn.execute(text(f"DROP INDEX IF EXISTS {name}"))
