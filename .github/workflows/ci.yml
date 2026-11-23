@@ -64,3 +64,52 @@ jobs:
         run: pip install -r requirements-dev.txt
       - name: Запустити тести
         run: pytest -v
+
+  docker:
+    name: Docker (збирання і запуск усієї системи)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Файли налаштувань із шаблонів (лише для CI)
+        run: |
+          cp .env.example .env
+          cp .env.sandbox.example .env.sandbox
+      - name: Перевірка синтаксису docker-compose.yml
+        run: docker compose config -q
+      - name: Зібрати образ і підняти систему
+        run: docker compose up -d --build
+      - name: Дочекатися готовності застосунку
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/health/db; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Перевірити API, міграції та початкові дані
+        run: |
+          docker compose ps -a
+          curl -fsS http://127.0.0.1:8080/health
+          curl -fsS http://127.0.0.1:8080/doctors | python3 -c "import json,sys; d=json.load(sys.stdin); assert len(d) >= 4, d; print(len(d), 'doctors from seed')"
+          test "$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -aq migrate)")" = "0"
+      - name: "ЛР6: Nginx розподіляє запити між репліками"
+        run: |
+          for i in $(seq 1 12); do
+            curl -fsS -D - -o /dev/null http://127.0.0.1:8080/health | tr -d '\r' | grep -i '^x-instance:'
+          done | sort | uniq -c | tee instances.txt
+          test "$(wc -l < instances.txt)" -eq 3
+      - name: "ЛР6: збій однієї репліки не помітний для клієнта"
+        run: |
+          docker stop "$(docker compose ps -q app | head -n 1)"
+          for i in $(seq 1 12); do
+            curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/health
+          done | sort | uniq -c | tee codes.txt
+          test "$(cat codes.txt | tr -s ' ')" = " 12 200"
+      - name: Розмір образу
+        run: docker image ls ehealth-booking
+      - name: Логи (якщо щось пішло не так)
+        if: failure()
+        run: docker compose logs
+      - name: Зупинити
+        if: always()
+        run: docker compose down -v

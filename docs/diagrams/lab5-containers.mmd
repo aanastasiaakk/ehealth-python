@@ -1,0 +1,20 @@
+flowchart LR
+    user([Браузер / Locust]) -->|":8080"| app
+
+    subgraph host["Docker на Mac"]
+        subgraph front["мережа frontend"]
+            app["app<br/>FastAPI + uvicorn<br/>образ ehealth-booking"]
+        end
+        subgraph back["мережа backend"]
+            migrate["migrate<br/>одноразово: міграції + seed"]
+            dbs[("db-sandbox<br/>postgres:16-alpine")]
+            dbp[("db-production<br/>postgres:16-alpine")]
+        end
+        vols[["томи pgdata-sandbox<br/>pgdata-production"]]
+    end
+
+    app -->|"db-sandbox:5432"| dbs
+    migrate -->|"1. healthy"| dbs
+    migrate -.->|"2. exited (0)"| app
+    dbs --- vols
+    dbp --- vols

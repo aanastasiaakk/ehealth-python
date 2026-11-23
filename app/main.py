@@ -11,8 +11,10 @@ from fastapi.responses import RedirectResponse
 from app import models  # noqa: F401  (імпорт реєструє таблиці в Base.metadata)
 from app.api import admin, appointments, auth, catalog, doctor, health, users
 from app.config import get_settings
-from app.database import Base, engine
+from app.database import engine
 from app.errors import setup_error_handling
+from app.instance import INSTANCE_ID
+from app.migrations import apply_migrations
 from app.web import pages
 
 settings = get_settings()
@@ -20,16 +22,18 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Виконується один раз під час старту сервера:
-    # створює таблиці в базі, якщо їх ще немає.
-    Base.metadata.create_all(bind=engine)
+    # Виконується один раз під час старту сервера: створює таблиці й
+    # індекси, яких ще немає. У Docker вимкнено (AUTO_MIGRATE=false):
+    # там це робить окремий сервіс `migrate` до старту застосунку.
+    if settings.auto_migrate:
+        apply_migrations(engine)
     yield
 
 
 app = FastAPI(
     title=settings.app_name,
     description="Сервіс електронного запису до державних лікарів",
-    version="0.3.0",
+    version="0.5.0",
     lifespan=lifespan,
     # У production debug завжди False (перевіряє app/config.py)
     debug=settings.debug,
@@ -41,6 +45,34 @@ app = FastAPI(
 
 # Помилки 500 без стектрейсів для користувача, сторінка 404 (ЛР3)
 setup_error_handling(app)
+
+
+class InstanceHeaderMiddleware:
+    """Додає до КОЖНОЇ відповіді заголовок X-Instance з ім'ям копії
+    застосунку (ЛР6): так видно, яку репліку обрав Nginx.
+
+    Написано як «чисте» ASGI-проміжне ПЗ: воно лише дописує заголовок
+    і майже не додає затримки, на відміну від BaseHTTPMiddleware."""
+
+    def __init__(self, asgi_app):
+        self.app = asgi_app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_with_header(message):
+            if message["type"] == "http.response.start":
+                message["headers"] = [
+                    *message.get("headers", []),
+                    (b"x-instance", INSTANCE_ID.encode()),
+                ]
+            await send(message)
+
+        await self.app(scope, receive, send_with_header)
+
+
+app.add_middleware(InstanceHeaderMiddleware)
 
 # ---- JSON API ----
 app.include_router(health.router)

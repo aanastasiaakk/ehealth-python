@@ -21,4 +21,7 @@ __pycache__/
 .idea/
 
 # HTML-звіти Locust (~1 МБ, генеруються при кожному запуску)
-loadtest/results/*.html
+loadtest/results/**/*.html
+
+# Локальні файли Redis і результати перевірок, що генеруються
+dump.rdb

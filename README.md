@@ -17,6 +17,8 @@
 - [4. ЛР2: користувачі, ролі, розмежування прав](docs/04-lab2-auth.md)
 - [5. ЛР3: середовища sandbox / production, обробка помилок, CI](docs/05-lab3-environments.md)
 - [6. ЛР4: навантажувальне тестування (Locust), метрики, вузькі місця](docs/06-lab4-load-testing.md)
+- [7. ЛР5: контейнеризація (Docker, docker compose)](docs/07-lab5-docker.md)
+- [8. ЛР6: балансування навантаження (Nginx, 3 репліки)](docs/08-lab6-load-balancing.md)
 
 ![Архітектура](docs/images/architecture.png)
 
@@ -32,6 +34,8 @@
 | Jinja2 | HTML-сторінки |
 | **ruff**, **pre-commit** | контроль якості коду |
 | pytest | тести |
+| **Docker**, docker compose | контейнери: застосунок + бази однією командою |
+| **Nginx** | балансувальник навантаження перед 3 репліками (ЛР6) |
 
 ## Структура проєкту
 
@@ -60,6 +64,7 @@ ehealth-booking/
 │   ├── web/pages.py          #   HTML-сторінки
 │   └── templates/            #   HTML-шаблони
 ├── scripts/seed.py           # початкові дані (демо-дані лише в sandbox)
+├── scripts/migrate.py        # таблиці й індекси (у Docker — сервіс migrate)
 ├── scripts/seed_loadtest.py  # 200 тестових пацієнтів і слоти для ЛР4
 ├── loadtest/                 # НАВАНТАЖУВАЛЬНЕ ТЕСТУВАННЯ (ЛР4)
 │   ├── locustfile.py         #   сценарій Locust і профіль навантаження
@@ -69,8 +74,11 @@ ehealth-booking/
 ├── tests/                    # ТЕСТИ (102 шт.)
 ├── .github/workflows/ci.yml  # CI: лінтери + тести на кожен Pull Request
 ├── docs/                     # ДОКУМЕНТАЦІЯ та схеми
-├── config/nginx/nginx.conf   # КОНФІГУРАЦІЇ (балансувальник, заплановано)
-├── docker-compose.yml        # дві бази: db-sandbox і db-production
+├── config/nginx/             # Nginx: шаблон балансувальника + алгоритми (ЛР6)
+├── Dockerfile                # образ застосунку (multi-stage, ЛР5)
+├── .dockerignore             # що не потрапляє в образ (секрети, .git, кеш)
+├── docker-compose.yml        # уся система: бази, міграції, застосунок
+├── docker-compose.dev.yml    # режим розробки: hot reload у контейнері
 ├── .env.*.example            # шаблони налаштувань середовищ
 ├── requirements*.txt         # залежності
 ├── pyproject.toml            # налаштування ruff і pytest
@@ -113,9 +121,12 @@ cp .env.production.example .env.production  # налаштування productio
 ### Крок 1. Бази даних (Docker Desktop має бути запущений)
 
 ```bash
-docker compose up -d          # піднімає db-sandbox (5433) і db-production (5434)
-docker compose ps             # обидва мають бути (healthy)
+docker compose up -d db-sandbox db-production   # лише бази: 5433 і 5434
+docker compose ps                               # обидві мають бути (healthy)
 ```
+
+> Уся система в Docker (бази + міграції + застосунок на :8080) —
+> `docker compose up --build`, див. розділ «Docker» нижче.
 
 ### Sandbox: розробка і тестування
 
@@ -215,4 +226,23 @@ GitHub автоматично:
 ```bash
 docker rm -f ehealth-db   # видалити старий контейнер з ЛР1–ЛР2
 docker compose up -d
+```
+
+## Docker (уся система однією командою)
+
+Повний опис: [docs/07-lab5-docker.md](docs/07-lab5-docker.md).
+
+```bash
+docker compose up --build            # бази → міграції + seed → застосунок
+```
+
+Відкрий http://127.0.0.1:8080 (демо-акаунти ті самі, що в sandbox).
+Запити приймає Nginx і розподіляє між 3 репліками застосунку (ЛР6);
+яка репліка відповіла — видно в заголовку `X-Instance`.
+
+```bash
+bash scripts/lab5_docker_check.sh    # автоматична перевірка всього (ЛР5)
+bash scripts/lab6_balancer_check.sh  # Round Robin, збій репліки, least_conn (ЛР6)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build   # hot reload
+docker compose down                  # зупинити (дані баз зберігаються)
 ```

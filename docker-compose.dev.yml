@@ -1,0 +1,31 @@
+# Режим розробки з автоперезавантаженням (hot reload), ЛР5.
+# Підключається ПОВЕРХ основного файлу:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Що змінюється порівняно з docker-compose.yml:
+# - папки app/ і scripts/ з Mac «прокидаються» в контейнер (bind mount):
+#   контейнер бачить твої файли напряму, а не копію з образу;
+# - uvicorn запускається з --reload: зберегла файл у PyCharm → сервер
+#   перезапустився сам за 1–2 с, перезбирати образ НЕ потрібно;
+# - DEBUG=true: детальні помилки й SQL у логах (лише для розробки!).
+services:
+  app:
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - app
+    environment:
+      DEBUG: "true"
+      # Docker Desktop на Mac не завжди передає події «файл змінився»
+      # у контейнер, тому перевіряємо файли опитуванням
+      WATCHFILES_FORCE_POLLING: "true"
+    volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts

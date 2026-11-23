@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     db_pool_size: int = 10
     db_max_overflow: int = 20
 
+    # Створювати таблиці під час старту застосунку (зручно для локального
+    # запуску). У Docker це робить окремий сервіс `migrate`, тому там
+    # AUTO_MIGRATE=false (ЛР5).
+    auto_migrate: bool = True
+
     # Перший адміністратор (створюється скриптом scripts/seed.py)
     admin_email: str | None = None
     admin_password: str | None = None

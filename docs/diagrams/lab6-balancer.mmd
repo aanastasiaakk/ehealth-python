@@ -1,0 +1,21 @@
+flowchart LR
+    user([Браузер / Locust]) -->|":8080"| nginx
+
+    subgraph host["Docker"]
+        subgraph front["мережа frontend"]
+            nginx["nginx<br/>upstream ehealth_app<br/>Round Robin"]
+            a1["app-1<br/>uvicorn"]
+            a2["app-2<br/>uvicorn"]
+            a3["app-3<br/>uvicorn"]
+        end
+        subgraph back["мережа backend"]
+            db[("db-sandbox<br/>PostgreSQL")]
+        end
+    end
+
+    nginx -->|"запит 1, 4, 7..."| a1
+    nginx -->|"запит 2, 5, 8..."| a2
+    nginx -->|"запит 3, 6, 9..."| a3
+    a1 --> db
+    a2 --> db
+    a3 --> db

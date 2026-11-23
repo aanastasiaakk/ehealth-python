@@ -1,0 +1,43 @@
+# Що НЕ копіюється в Docker-образ (ЛР5).
+# Менше файлів — швидше збирання, менший образ і жодних секретів усередині.
+
+# Git та службові файли редакторів
+.git
+.gitignore
+.github
+.idea
+.vscode
+.DS_Store
+
+# Віртуальні оточення та кеш Python
+.venv
+venv
+__pycache__
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+
+# СЕКРЕТИ: файли середовищ ніколи не потрапляють в образ.
+# Змінні оточення передаються в контейнер під час запуску (docker-compose.yml).
+.env
+.env.*
+
+# Логи
+*.log
+logs
+
+# Те, що не потрібно для роботи сервера
+tests
+docs
+loadtest
+config
+monitoring
+nginx
+*.md
+Dockerfile
+.dockerignore
+docker-compose*.yml
+.pre-commit-config.yaml
+requirements-dev.txt
+requirements-loadtest.txt

@@ -1,0 +1,6 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,POST /appointments (book),HTTPError('401 Client Error: Unauthorized for url: POST /appointments (book)'),5,2026-11-22T09:05:35Z,2026-11-22T09:05:42Z
+GET,GET /appointments/me,HTTPError('401 Client Error: Unauthorized for url: GET /appointments/me'),10,2026-11-22T09:05:21Z,2026-11-22T09:05:50Z
+POST,POST /auth/token (login),HTTPError('504 Server Error: Gateway Time-out for url: POST /auth/token (login)'),4,2026-11-22T09:05:19Z,2026-11-22T09:05:48Z
+POST,POST /appointments (book),HTTPError('504 Server Error: Gateway Time-out for url: POST /appointments (book)'),32,2026-11-22T09:05:18Z,2026-11-22T09:05:32Z
+DELETE,DELETE /appointments/[id],HTTPError('404 Client Error: Not Found for url: DELETE /appointments/[id]'),1,2026-11-22T09:05:26Z,2026-11-22T09:05:26Z
