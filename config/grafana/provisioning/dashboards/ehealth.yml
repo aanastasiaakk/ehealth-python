@@ -1,0 +1,9 @@
+# Grafana автоматично завантажує дашборди з папки config/grafana/dashboards
+apiVersion: 1
+providers:
+  - name: ehealth
+    folder: e-Health
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

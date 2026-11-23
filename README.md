@@ -20,6 +20,7 @@
 - [7. ЛР5: контейнеризація (Docker, docker compose)](docs/07-lab5-docker.md)
 - [8. ЛР6: балансування навантаження (Nginx, 3 репліки)](docs/08-lab6-load-balancing.md)
 - [9. ЛР7: оптимізація (обмежувач запитів, Redis, індекси, ДО/ПІСЛЯ)](docs/09-lab7-optimization.md)
+- [10. ЛР8: тест стабільності (Soak 60 хв, точка зламу, spike, Prometheus + Grafana)](docs/10-lab8-stability.md)
 
 ![Архітектура](docs/images/architecture.png)
 
@@ -38,6 +39,7 @@
 | **Docker**, docker compose | контейнери: застосунок + бази однією командою |
 | **Nginx** | балансувальник навантаження перед 3 репліками (ЛР6) |
 | **Redis** | кеш каталогу лікарів і вільних слотів (ЛР7) |
+| **Prometheus**, **Grafana** | метрики й дашборд моніторингу (ЛР8) |
 
 ## Структура проєкту
 
@@ -50,6 +52,7 @@ ehealth-booking/
 │   ├── database.py           #   підключення до PostgreSQL
 │   ├── cache.py              #   кеш у Redis (ЛР7)
 │   ├── limiter.py            #   обмеження одночасних запитів (ЛР7)
+│   ├── metrics.py            #   метрики /metrics для Prometheus (ЛР8)
 │   ├── models.py             #   таблиці бази даних
 │   ├── schemas.py            #   формати даних API (що приймаємо / віддаємо)
 │   ├── security.py           #   паролі (bcrypt) і токени (JWT)
@@ -76,10 +79,12 @@ ehealth-booking/
 │   ├── monitor.py            #   збір CPU/RAM сервера під час тесту
 │   ├── make_report.py        #   графіки й таблиці для звіту
 │   └── results/              #   сирі результати прогонів (CSV)
-├── tests/                    # ТЕСТИ (102 шт.)
+├── tests/                    # ТЕСТИ (132 шт.)
 ├── .github/workflows/ci.yml  # CI: лінтери + тести на кожен Pull Request
 ├── docs/                     # ДОКУМЕНТАЦІЯ та схеми
 ├── config/nginx/             # Nginx: шаблон балансувальника + алгоритми (ЛР6)
+├── config/prometheus/        # Prometheus: що і як часто збирати (ЛР8)
+├── config/grafana/           # Grafana: джерело даних і дашборд (ЛР8)
 ├── Dockerfile                # образ застосунку (multi-stage, ЛР5)
 ├── .dockerignore             # що не потрапляє в образ (секрети, .git, кеш)
 ├── docker-compose.yml        # уся система: бази, міграції, застосунок
@@ -255,5 +260,6 @@ docker compose up --build            # бази → міграції + seed → 
 bash scripts/lab5_docker_check.sh    # автоматична перевірка всього (ЛР5)
 bash scripts/lab6_balancer_check.sh  # Round Robin, збій репліки, least_conn (ЛР6)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build   # hot reload
+docker compose --profile monitoring up -d   # + Prometheus :9090 і Grafana :3000 (ЛР8)
 docker compose down                  # зупинити (дані баз зберігаються)
 ```

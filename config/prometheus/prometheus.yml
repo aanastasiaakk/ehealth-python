@@ -1,0 +1,26 @@
+# Prometheus: збирає метрики кожні 5 с (ЛР8).
+# Запуск разом із системою:  docker compose --profile monitoring up -d
+# Веб-інтерфейс: http://127.0.0.1:9090   (Status → Targets — хто опитується)
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Усі репліки застосунку. Ім'я `app` DNS Docker перетворює на IP кожної
+  # репліки, тож нові репліки підхоплюються автоматично.
+  - job_name: ehealth-app
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [app]
+        type: A
+        port: 8000
+        refresh_interval: 10s
+
+  # PostgreSQL: кількість з'єднань, транзакції, розмір бази
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

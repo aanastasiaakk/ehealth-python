@@ -1,0 +1,18 @@
+# Prometheus для тестового стенду БЕЗ Docker (ЛР8): ті самі задачі, що й
+# config/prometheus/prometheus.yml, але репліки — процеси uvicorn
+# на портах 8001–8003 (див. loadtest/nginx-bench.conf).
+#
+#   prometheus --config.file=loadtest/prometheus-bench.yml \
+#       --storage.tsdb.path=/tmp/prom-bench --web.listen-address=127.0.0.1:9090
+#   DATA_SOURCE_NAME=postgresql://...  prometheus-postgres-exporter
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: ehealth-app
+    static_configs:
+      - targets: ["127.0.0.1:8001", "127.0.0.1:8002", "127.0.0.1:8003"]
+  - job_name: postgres
+    static_configs:
+      - targets: ["127.0.0.1:9187"]
