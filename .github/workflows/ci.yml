@@ -116,15 +116,24 @@ jobs:
             curl -fsS http://127.0.0.1:3000/api/health && break
             sleep 2
           done
-          sleep 20
-          curl -fsS 'http://127.0.0.1:9090/api/v1/query?query=up' | python3 -c "
+          # Prometheus опитує цілі кожні 5 с: чекаємо, поки репліки і postgres стануть UP
+          for i in $(seq 1 30); do
+            if curl -fsS 'http://127.0.0.1:9090/api/v1/query?query=up' | python3 -c "
           import json, sys
           result = json.load(sys.stdin)['data']['result']
-          up = {r['labels']['job'] for r in result if r['value'][1] == '1'}
-          print('targets up:', up)
-          assert {'ehealth-app', 'postgres'} <= up
-          "
-          curl -fsS 'http://127.0.0.1:3000/api/search?query=e-Health' | grep -q ehealth-overview
+          up = {r['metric']['job'] for r in result if r['value'][1] == '1'}
+          print('targets up:', sorted(up))
+          sys.exit(0 if {'ehealth-app', 'postgres'} <= up else 1)
+          "; then break; fi
+            if [ "$i" = 30 ]; then exit 1; fi
+            sleep 3
+          done
+          # Дашборд підвантажився в Grafana автоматично (provisioning)
+          for i in $(seq 1 20); do
+            curl -fsS 'http://127.0.0.1:3000/api/search?query=e-Health' | grep -q ehealth-overview && exit 0
+            sleep 3
+          done
+          exit 1
       - name: Розмір образу
         run: docker image ls ehealth-booking
       - name: Логи (якщо щось пішло не так)
