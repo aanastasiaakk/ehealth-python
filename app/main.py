@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.database import engine
 from app.errors import setup_error_handling
 from app.instance import INSTANCE_ID
+from app.limiter import ConcurrencyLimitMiddleware
 from app.migrations import apply_migrations
 from app.web import pages
 
@@ -33,7 +34,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description="Сервіс електронного запису до державних лікарів",
-    version="0.5.0",
+    version="0.7.0",
     lifespan=lifespan,
     # У production debug завжди False (перевіряє app/config.py)
     debug=settings.debug,
@@ -72,6 +73,13 @@ class InstanceHeaderMiddleware:
         await self.app(scope, receive, send_with_header)
 
 
+# ЛР7: не більше max_concurrent_requests запитів одночасно (див. app/limiter.py)
+app.add_middleware(
+    ConcurrencyLimitMiddleware,
+    limit=settings.max_concurrent_requests,
+    queue_timeout=settings.request_queue_timeout,
+)
+# Додається останнім = виконується першим: X-Instance є навіть у відповіді 503
 app.add_middleware(InstanceHeaderMiddleware)
 
 # ---- JSON API ----

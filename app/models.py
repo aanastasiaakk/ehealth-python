@@ -16,9 +16,11 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -87,11 +89,26 @@ class Slot(Base):
     """Проміжок часу, на який можна записатися до лікаря."""
 
     __tablename__ = "slots"
-    # Лікар не може мати два слоти, що починаються в той самий час
-    __table_args__ = (UniqueConstraint("doctor_id", "starts_at"),)
+    __table_args__ = (
+        # Лікар не може мати два слоти, що починаються в той самий час.
+        # Це обмеження створює індекс (doctor_id, starts_at), тому окремий
+        # індекс лише по doctor_id зайвий (прибрано в ЛР7).
+        UniqueConstraint("doctor_id", "starts_at"),
+        # ЛР7: ЧАСТКОВИЙ індекс лише по ВІЛЬНИХ слотах. Найчастіший запит
+        # системи — «вільні слоти лікаря від зараз», а зайняті й минулі
+        # слоти (їх з часом більшість) у цей індекс не потрапляють:
+        # він у рази менший, і базі не треба відкидати зайняті рядки.
+        # Див. EXPLAIN ANALYZE у docs/09-lab7-optimization.md
+        Index(
+            "ix_slots_free_by_doctor",
+            "doctor_id",
+            "starts_at",
+            postgresql_where=text("is_available"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id"), index=True)
+    doctor_id: Mapped[int] = mapped_column(ForeignKey("doctors.id"))
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
 

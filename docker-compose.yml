@@ -1,4 +1,4 @@
-# Уся система e-Health Booking в Docker (ЛР5, ЛР6).
+# Уся система e-Health Booking в Docker (ЛР5–ЛР7).
 #
 #   docker compose up --build        зібрати образ і підняти ВСЕ
 #   docker compose up -d --build     те саме, але у фоні
@@ -12,7 +12,7 @@
 #
 # Порядок запуску (depends_on + healthcheck):
 #   db-sandbox (healthy) → migrate (таблиці + початкові дані, exited 0)
-#   → app ×3 (healthy) → nginx
+#   → redis (healthy) → app ×3 (healthy) → nginx
 #
 # Кількість реплік і алгоритм балансування (ЛР6):
 #   APP_REPLICAS=2 docker compose up -d          інша кількість реплік
@@ -40,12 +40,17 @@ x-app-common: &app-common
     # портом 5432 — через внутрішню мережу backend, а не через localhost.
     # Це значення має пріоритет над DATABASE_URL з .env.sandbox.
     DATABASE_URL: postgresql+psycopg://ehealth_sandbox:${POSTGRES_PASSWORD_SANDBOX:?Set POSTGRES_PASSWORD_SANDBOX in .env}@db-sandbox:5432/ehealth_sandbox
+    # ЛР7: кеш каталогу (сервіс redis нижче)
+    REDIS_URL: redis://redis:6379/0
 
 services:
   # ---------- База даних тестового середовища ----------
   db-sandbox:
     image: postgres:16-alpine
     container_name: ehealth-db-sandbox
+    # ЛР7: кожна репліка тримає до 50 з'єднань (пул 20 + 30), 3 репліки = 150.
+    # Стандартних 100 з'єднань PostgreSQL на це не вистачить.
+    command: ["postgres", "-c", "max_connections=200"]
     environment:
       POSTGRES_USER: ehealth_sandbox
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_SANDBOX:?Set POSTGRES_PASSWORD_SANDBOX in .env}
@@ -70,6 +75,7 @@ services:
   db-production:
     image: postgres:16-alpine
     container_name: ehealth-db-production
+    command: ["postgres", "-c", "max_connections=200"]
     environment:
       POSTGRES_USER: ehealth_prod
       # Без пароля в .env контейнер не запуститься (немає значення за замовчуванням)
@@ -86,6 +92,21 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # ---------- Redis: кеш каталогу (ЛР7) ----------
+  redis:
+    image: redis:7-alpine
+    # Лише кеш: без збереження на диск, максимум 64 МБ, при заповненні
+    # витісняються найдавніші ключі (LRU)
+    command: ["redis-server", "--save", "", "--appendonly", "no",
+              "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    networks: [backend]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # ---------- Одноразовий крок: міграції + початкові дані ----------
   migrate:
@@ -109,6 +130,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully   # міграції пройшли без помилок
+      redis:
+        condition: service_healthy
     # Порт НЕ публікується на Mac: три репліки не можуть зайняти один
     # порт 8080. Ззовні до них можна дістатися лише через Nginx.
     expose:

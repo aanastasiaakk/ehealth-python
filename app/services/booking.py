@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app import cache
 from app.models import Appointment, Doctor, Role, Slot, User
 
 
@@ -56,6 +57,8 @@ def book_slot(db: Session, patient: User, slot_id: int) -> Appointment:
     except IntegrityError as exc:
         db.rollback()
         raise SlotUnavailable(slot_id) from exc
+    # ЛР7: список вільних слотів лікаря змінився — прибираємо його з кешу
+    cache.delete(cache.slots_key(slot.doctor_id))
     db.refresh(appointment)
     return appointment
 
@@ -81,8 +84,10 @@ def cancel_appointment(db: Session, appointment: Appointment) -> None:
     if appointment.slot.starts_at <= _now():
         raise CannotCancelPast(appointment.id)
     appointment.slot.is_available = True
+    doctor_id = appointment.slot.doctor_id
     db.delete(appointment)
     db.commit()
+    cache.delete(cache.slots_key(doctor_id))  # ЛР7: слот знову вільний
 
 
 def list_patient_appointments(db: Session, patient_id: int) -> list[Appointment]:
@@ -147,6 +152,8 @@ def generate_slots(
             created.append(slot)
         current += timedelta(minutes=minutes)
     db.commit()
+    if created:
+        cache.delete(cache.slots_key(doctor_id))  # ЛР7: з'явилися нові слоти
     return created
 
 

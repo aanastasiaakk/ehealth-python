@@ -105,6 +105,10 @@ jobs:
             curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/health
           done | sort | uniq -c | tee codes.txt
           test "$(cat codes.txt | tr -s ' ')" = " 12 200"
+      - name: "ЛР7: каталог віддається з кешу Redis"
+        run: |
+          curl -fsS -o /dev/null http://127.0.0.1:8080/specialties
+          curl -fsS -D - -o /dev/null http://127.0.0.1:8080/specialties | tr -d '\r' | grep -i '^x-cache: HIT'
       - name: Розмір образу
         run: docker image ls ehealth-booking
       - name: Логи (якщо щось пішло не так)
